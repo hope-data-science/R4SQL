@@ -1,0 +1,1075 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "基于R的SQL实验讲义",
+    "section": "",
+    "text": "前言\n本书是浙江财经大学数据科学学院数据科学与大数据技术系黄天元讲师为《数据库技术及应用》课程筹备的课程讲义，旨在综合使用R、SQLite等工具，结合《SQL必知必会》等经典教程，引导学生了解数据库技术的方方面面，并进行实践操作。R语言环境配置如下：\n\nif (!require(\"pacman\")) install.packages(\"pacman\")\npacman::p_load(tidyverse,DBI,RSQLite,fs,dbplyr)\n\nSQLite的集成开发环境为DB Browser for SQLite。\n相关参考资料：\n\n在R中使用SQLite\nR数据科学数据库相关章节\nCRAN Task View: Databases with R\nSQL必知必会（第五版）官方资料",
+    "crumbs": [
+      "前言"
+    ]
+  },
+  {
+    "objectID": "chap1.html",
+    "href": "chap1.html",
+    "title": "1  必知必会第1课：了解SQL",
+    "section": "",
+    "text": "在本课的实践中，我们将会构建并了解贯穿我们课程始终的数据库。首先，我们先使用脚本来构建数据库。\n我们将会在R中来运行SQL脚本，从而自动化地构建我们的原始数据库。其中，创建数据库的脚本如下：\n\n-----------------------------------------------------\n-- Sams Teach Yourself SQL in 10 Minutes, 5th Edition\n-- http://forta.com/books/0135182794/\n-- Example table creation scripts for SQLite\n-----------------------------------------------------\n\n\n-- ----------------------\n-- Create Customers table\n-- ----------------------\nCREATE TABLE Customers\n(\n  cust_id      char(10)  NOT NULL ,\n  cust_name    char(50)  NOT NULL ,\n  cust_address char(50)  NULL ,\n  cust_city    char(50)  NULL ,\n  cust_state   char(5)   NULL ,\n  cust_zip     char(10)  NULL ,\n  cust_country char(50)  NULL ,\n  cust_contact char(50)  NULL ,\n  cust_email   char(255) NULL ,\n  PRIMARY KEY (cust_id)\n);\n\n-- -----------------------\n-- Create OrderItems table\n-- -----------------------\nCREATE TABLE OrderItems\n(\n  order_num  int          NOT NULL                      ,\n  order_item int          NOT NULL                      ,\n  prod_id    char(10)     NOT NULL                      ,\n  quantity   int          NOT NULL                      ,\n  item_price decimal(8,2) NOT NULL                      ,\n  PRIMARY KEY (order_num, order_item)                   ,\n  FOREIGN KEY (order_num) REFERENCES Orders (order_num) ,\n  FOREIGN KEY (prod_id) REFERENCES Products (prod_id)\n);\n\n\n-- -------------------\n-- Create Orders table\n-- -------------------\nCREATE TABLE Orders\n(\n  order_num  int      NOT NULL ,\n  order_date datetime NOT NULL ,\n  cust_id    char(10) NOT NULL ,\n  PRIMARY KEY (order_num)      ,\n  FOREIGN KEY (cust_id) REFERENCES Customers (cust_id)\n);\n\n-- ---------------------\n-- Create Products table\n-- ---------------------\nCREATE TABLE Products\n(\n  prod_id    char(10)      NOT NULL ,\n  vend_id    char(10)      NOT NULL ,\n  prod_name  char(255)     NOT NULL ,\n  prod_price decimal(8,2)  NOT NULL ,\n  prod_desc  text          NULL     ,\n  PRIMARY KEY (prod_id)             ,\n  FOREIGN KEY (vend_id) REFERENCES Vendors (vend_id)\n);\n\n-- --------------------\n-- Create Vendors table\n-- --------------------\nCREATE TABLE Vendors\n(\n  vend_id      char(10) NOT NULL ,\n  vend_name    char(50) NOT NULL ,\n  vend_address char(50) NULL     ,\n  vend_city    char(50) NULL     ,\n  vend_state   char(5)  NULL     ,\n  vend_zip     char(10) NULL     ,\n  vend_country char(50) NULL     ,\n  PRIMARY KEY (vend_id)\n);\n\n\n-- -------------------\n-- Define primary keys\n-- SQLite does not allow PK to be defined using ALTER TABLE, so defined in CREATE TABLE\n-- -------------------\n\n\n-- -------------------\n-- Define foreign keys\n-- SQLite does not allow FK to be defined using ALTER TABLE, so defined in CREATE TABLE\n-- -------------------\n\n然后，我们往创建的数据库中添加数据：\n\n-----------------------------------------------------\n-- Sams Teach Yourself SQL in 10 Minutes, 5th Edition\n-- http://forta.com/books/0135182794/\n-- Example table population scripts for SQLite\n-----------------------------------------------------\n\n\n-- ------------------------\n-- Populate Customers table\n-- ------------------------\nINSERT INTO Customers(cust_id, cust_name, cust_address, cust_city, cust_state, cust_zip, cust_country, cust_contact, cust_email)\nVALUES('1000000001', 'Village Toys', '200 Maple Lane', 'Detroit', 'MI', '44444', 'USA', 'John Smith', 'sales@villagetoys.com');\nINSERT INTO Customers(cust_id, cust_name, cust_address, cust_city, cust_state, cust_zip, cust_country, cust_contact)\nVALUES('1000000002', 'Kids Place', '333 South Lake Drive', 'Columbus', 'OH', '43333', 'USA', 'Michelle Green');\nINSERT INTO Customers(cust_id, cust_name, cust_address, cust_city, cust_state, cust_zip, cust_country, cust_contact, cust_email)\nVALUES('1000000003', 'Fun4All', '1 Sunny Place', 'Muncie', 'IN', '42222', 'USA', 'Jim Jones', 'jjones@fun4all.com');\nINSERT INTO Customers(cust_id, cust_name, cust_address, cust_city, cust_state, cust_zip, cust_country, cust_contact, cust_email)\nVALUES('1000000004', 'Fun4All', '829 Riverside Drive', 'Phoenix', 'AZ', '88888', 'USA', 'Denise L. Stephens', 'dstephens@fun4all.com');\nINSERT INTO Customers(cust_id, cust_name, cust_address, cust_city, cust_state, cust_zip, cust_country, cust_contact)\nVALUES('1000000005', 'The Toy Store', '4545 53rd Street', 'Chicago', 'IL', '54545', 'USA', 'Kim Howard');\n\n-- ----------------------\n-- Populate Vendors table\n-- ----------------------\nINSERT INTO Vendors(vend_id, vend_name, vend_address, vend_city, vend_state, vend_zip, vend_country)\nVALUES('BRS01','Bears R Us','123 Main Street','Bear Town','MI','44444', 'USA');\nINSERT INTO Vendors(vend_id, vend_name, vend_address, vend_city, vend_state, vend_zip, vend_country)\nVALUES('BRE02','Bear Emporium','500 Park Street','Anytown','OH','44333', 'USA');\nINSERT INTO Vendors(vend_id, vend_name, vend_address, vend_city, vend_state, vend_zip, vend_country)\nVALUES('DLL01','Doll House Inc.','555 High Street','Dollsville','CA','99999', 'USA');\nINSERT INTO Vendors(vend_id, vend_name, vend_address, vend_city, vend_state, vend_zip, vend_country)\nVALUES('FRB01','Furball Inc.','1000 5th Avenue','New York','NY','11111', 'USA');\nINSERT INTO Vendors(vend_id, vend_name, vend_address, vend_city, vend_state, vend_zip, vend_country)\nVALUES('FNG01','Fun and Games','42 Galaxy Road','London', NULL,'N16 6PS', 'England');\nINSERT INTO Vendors(vend_id, vend_name, vend_address, vend_city, vend_state, vend_zip, vend_country)\nVALUES('JTS01','Jouets et ours','1 Rue Amusement','Paris', NULL,'45678', 'France');\n\n-- -----------------------\n-- Populate Products table\n-- -----------------------\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('BR01', 'BRS01', '8 inch teddy bear', 5.99, '8 inch teddy bear, comes with cap and jacket');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('BR02', 'BRS01', '12 inch teddy bear', 8.99, '12 inch teddy bear, comes with cap and jacket');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('BR03', 'BRS01', '18 inch teddy bear', 11.99, '18 inch teddy bear, comes with cap and jacket');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('BNBG01', 'DLL01', 'Fish bean bag toy', 3.49, 'Fish bean bag toy, complete with bean bag worms with which to feed it');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('BNBG02', 'DLL01', 'Bird bean bag toy', 3.49, 'Bird bean bag toy, eggs are not included');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('BNBG03', 'DLL01', 'Rabbit bean bag toy', 3.49, 'Rabbit bean bag toy, comes with bean bag carrots');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('RGAN01', 'DLL01', 'Raggedy Ann', 4.99, '18 inch Raggedy Ann doll');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('RYL01', 'FNG01', 'King doll', 9.49, '12 inch king doll with royal garments and crown');\nINSERT INTO Products(prod_id, vend_id, prod_name, prod_price, prod_desc)\nVALUES('RYL02', 'FNG01', 'Queen doll', 9.49, '12 inch queen doll with royal garments and crown');\n\n-- ---------------------\n-- Populate Orders table\n-- ---------------------\nINSERT INTO Orders(order_num, order_date, cust_id)\nVALUES(20005, '2020-05-01', '1000000001');\nINSERT INTO Orders(order_num, order_date, cust_id)\nVALUES(20006, '2020-01-12', '1000000003');\nINSERT INTO Orders(order_num, order_date, cust_id)\nVALUES(20007, '2020-01-30', '1000000004');\nINSERT INTO Orders(order_num, order_date, cust_id)\nVALUES(20008, '2020-02-03', '1000000005');\nINSERT INTO Orders(order_num, order_date, cust_id)\nVALUES(20009, '2020-02-08', '1000000001');\n\n-- -------------------------\n-- Populate OrderItems table\n-- -------------------------\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20005, 1, 'BR01', 100, 5.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20005, 2, 'BR03', 100, 10.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20006, 1, 'BR01', 20, 5.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20006, 2, 'BR02', 10, 8.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20006, 3, 'BR03', 10, 11.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20007, 1, 'BR03', 50, 11.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20007, 2, 'BNBG01', 100, 2.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20007, 3, 'BNBG02', 100, 2.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20007, 4, 'BNBG03', 100, 2.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20007, 5, 'RGAN01', 50, 4.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20008, 1, 'RGAN01', 5, 4.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20008, 2, 'BR03', 5, 11.99);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20008, 3, 'BNBG01', 10, 3.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20008, 4, 'BNBG02', 10, 3.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20008, 5, 'BNBG03', 10, 3.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20009, 1, 'BNBG01', 250, 2.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20009, 2, 'BNBG02', 250, 2.49);\nINSERT INTO OrderItems(order_num, order_item, prod_id, quantity, item_price)\nVALUES(20009, 3, 'BNBG03', 250, 2.49);\n\n然后，我们观察《SQL必知必会》的附录A来观察数据框中各个表的结构和相互关系。",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>必知必会第1课：了解SQL</span>"
+    ]
+  },
+  {
+    "objectID": "chap2.html",
+    "href": "chap2.html",
+    "title": "2  必知必会第2课：检索数据",
+    "section": "",
+    "text": "2.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>必知必会第2课：检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap2.html#基于sql的数据操作",
+    "href": "chap2.html#基于sql的数据操作",
+    "title": "2  必知必会第2课：检索数据",
+    "section": "2.2 基于SQL的数据操作",
+    "text": "2.2 基于SQL的数据操作\n\n# 2.2\ndbGetQuery(mydb,\"SELECT prod_name FROM Products;\") \n\n            prod_name\n1   8 inch teddy bear\n2  12 inch teddy bear\n3  18 inch teddy bear\n4   Fish bean bag toy\n5   Bird bean bag toy\n6 Rabbit bean bag toy\n7         Raggedy Ann\n8           King doll\n9          Queen doll\n\n# 2.3\ndbGetQuery(mydb,\"SELECT prod_id, prod_name, prod_price\nFROM Products;\")\n\n  prod_id           prod_name prod_price\n1    BR01   8 inch teddy bear       5.99\n2    BR02  12 inch teddy bear       8.99\n3    BR03  18 inch teddy bear      11.99\n4  BNBG01   Fish bean bag toy       3.49\n5  BNBG02   Bird bean bag toy       3.49\n6  BNBG03 Rabbit bean bag toy       3.49\n7  RGAN01         Raggedy Ann       4.99\n8   RYL01           King doll       9.49\n9   RYL02          Queen doll       9.49\n\n# 2.4\ndbGetQuery(mydb,\"SELECT *\nFROM Products;\")\n\n  prod_id vend_id           prod_name prod_price\n1    BR01   BRS01   8 inch teddy bear       5.99\n2    BR02   BRS01  12 inch teddy bear       8.99\n3    BR03   BRS01  18 inch teddy bear      11.99\n4  BNBG01   DLL01   Fish bean bag toy       3.49\n5  BNBG02   DLL01   Bird bean bag toy       3.49\n6  BNBG03   DLL01 Rabbit bean bag toy       3.49\n7  RGAN01   DLL01         Raggedy Ann       4.99\n8   RYL01   FNG01           King doll       9.49\n9   RYL02   FNG01          Queen doll       9.49\n                                                              prod_desc\n1                          8 inch teddy bear, comes with cap and jacket\n2                         12 inch teddy bear, comes with cap and jacket\n3                         18 inch teddy bear, comes with cap and jacket\n4 Fish bean bag toy, complete with bean bag worms with which to feed it\n5                              Bird bean bag toy, eggs are not included\n6                      Rabbit bean bag toy, comes with bean bag carrots\n7                                              18 inch Raggedy Ann doll\n8                       12 inch king doll with royal garments and crown\n9                      12 inch queen doll with royal garments and crown\n\n# 2.5\ndbGetQuery(mydb,\"SELECT vend_id\nFROM Products;\")\n\n  vend_id\n1   BRS01\n2   BRS01\n3   BRS01\n4   DLL01\n5   DLL01\n6   DLL01\n7   DLL01\n8   FNG01\n9   FNG01\n\ndbGetQuery(mydb,\"SELECT DISTINCT vend_id\nFROM Products;\")\n\n  vend_id\n1   BRS01\n2   DLL01\n3   FNG01\n\n# 2.6\ndbGetQuery(mydb,\"SELECT prod_name\nFROM Products\nLIMIT 5;\")\n\n           prod_name\n1  8 inch teddy bear\n2 12 inch teddy bear\n3 18 inch teddy bear\n4  Fish bean bag toy\n5  Bird bean bag toy\n\ndbGetQuery(mydb,\"SELECT prod_name\nFROM Products\nLIMIT 5 OFFSET 5;\")\n\n            prod_name\n1 Rabbit bean bag toy\n2         Raggedy Ann\n3           King doll\n4          Queen doll\n\n# 2.7\ndbGetQuery(mydb,\"SELECT prod_name -- 这是一条注释\nFROM Products;\")\n\n            prod_name\n1   8 inch teddy bear\n2  12 inch teddy bear\n3  18 inch teddy bear\n4   Fish bean bag toy\n5   Bird bean bag toy\n6 Rabbit bean bag toy\n7         Raggedy Ann\n8           King doll\n9          Queen doll",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>必知必会第2课：检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap2.html#基于tidyverse的数据操作",
+    "href": "chap2.html#基于tidyverse的数据操作",
+    "title": "2  必知必会第2课：检索数据",
+    "section": "2.3 基于tidyverse的数据操作",
+    "text": "2.3 基于tidyverse的数据操作\n\nmydb_products = tbl(mydb,\"Products\")\n\n# 2.2\nmydb_products %&gt;%\n  select(prod_name)\n\n# Source:   SQL [9 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name          \n  &lt;chr&gt;              \n1 8 inch teddy bear  \n2 12 inch teddy bear \n3 18 inch teddy bear \n4 Fish bean bag toy  \n5 Bird bean bag toy  \n6 Rabbit bean bag toy\n7 Raggedy Ann        \n8 King doll          \n9 Queen doll         \n\n# 2.3\nmydb_products %&gt;% \n  select(prod_id, prod_name, prod_price)\n\n# Source:   SQL [9 x 3]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_name           prod_price\n  &lt;chr&gt;   &lt;chr&gt;                    &lt;dbl&gt;\n1 BR01    8 inch teddy bear         5.99\n2 BR02    12 inch teddy bear        8.99\n3 BR03    18 inch teddy bear       12.0 \n4 BNBG01  Fish bean bag toy         3.49\n5 BNBG02  Bird bean bag toy         3.49\n6 BNBG03  Rabbit bean bag toy       3.49\n7 RGAN01  Raggedy Ann               4.99\n8 RYL01   King doll                 9.49\n9 RYL02   Queen doll                9.49\n\n# 2.4\nmydb_products\n\n# Source:   table&lt;`Products`&gt; [9 x 5]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id vend_id prod_name           prod_price prod_desc                      \n  &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;                    &lt;dbl&gt; &lt;chr&gt;                          \n1 BR01    BRS01   8 inch teddy bear         5.99 8 inch teddy bear, comes with …\n2 BR02    BRS01   12 inch teddy bear        8.99 12 inch teddy bear, comes with…\n3 BR03    BRS01   18 inch teddy bear       12.0  18 inch teddy bear, comes with…\n4 BNBG01  DLL01   Fish bean bag toy         3.49 Fish bean bag toy, complete wi…\n5 BNBG02  DLL01   Bird bean bag toy         3.49 Bird bean bag toy, eggs are no…\n6 BNBG03  DLL01   Rabbit bean bag toy       3.49 Rabbit bean bag toy, comes wit…\n7 RGAN01  DLL01   Raggedy Ann               4.99 18 inch Raggedy Ann doll       \n8 RYL01   FNG01   King doll                 9.49 12 inch king doll with royal g…\n9 RYL02   FNG01   Queen doll                9.49 12 inch queen doll with royal …\n\n# 2.5\nmydb_products %&gt;% \n  select(vend_id)\n\n# Source:   SQL [9 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_id\n  &lt;chr&gt;  \n1 BRS01  \n2 BRS01  \n3 BRS01  \n4 DLL01  \n5 DLL01  \n6 DLL01  \n7 DLL01  \n8 FNG01  \n9 FNG01  \n\nmydb_products %&gt;% \n  distinct(vend_id)\n\n# Source:   SQL [3 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_id\n  &lt;chr&gt;  \n1 BRS01  \n2 DLL01  \n3 FNG01  \n\n# 2.6\nmydb_products %&gt;% \n  select(prod_name) %&gt;% \n  head(5)\n\n# Source:   SQL [5 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name         \n  &lt;chr&gt;             \n1 8 inch teddy bear \n2 12 inch teddy bear\n3 18 inch teddy bear\n4 Fish bean bag toy \n5 Bird bean bag toy \n\nmydb_products %&gt;% \n  select(prod_name) %&gt;% \n  mutate(row_id = row_number()) %&gt;% \n  filter(row_id &gt; 5) %&gt;% \n  head(5)\n\n# Source:   SQL [4 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name           row_id\n  &lt;chr&gt;                &lt;int&gt;\n1 Rabbit bean bag toy      6\n2 Raggedy Ann              7\n3 King doll                8\n4 Queen doll               9\n\n# 2.7\nmydb_products %&gt;%\n  select(prod_name) # 这是一条注释\n\n# Source:   SQL [9 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name          \n  &lt;chr&gt;              \n1 8 inch teddy bear  \n2 12 inch teddy bear \n3 18 inch teddy bear \n4 Fish bean bag toy  \n5 Bird bean bag toy  \n6 Rabbit bean bag toy\n7 Raggedy Ann        \n8 King doll          \n9 Queen doll",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>必知必会第2课：检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap2.html#转译机制",
+    "href": "chap2.html#转译机制",
+    "title": "2  必知必会第2课：检索数据",
+    "section": "2.4 转译机制",
+    "text": "2.4 转译机制\n可以使用show_query函数来调查tidyverse包是如何把相关代码转译为SQL语句的。\n\nmydb_products %&gt;% \n  select(prod_name) %&gt;% \n  show_query()\n\n&lt;SQL&gt;\nSELECT `prod_name`\nFROM `Products`",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>必知必会第2课：检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap2.html#练习",
+    "href": "chap2.html#练习",
+    "title": "2  必知必会第2课：检索数据",
+    "section": "2.5 练习",
+    "text": "2.5 练习\n\n使用转译机制，看看R语言把相关代码都转译成什么SQL语句。\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>必知必会第2课：检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap3.html",
+    "href": "chap3.html",
+    "title": "3  必知必会第3课：排序检索数据",
+    "section": "",
+    "text": "3.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>必知必会第3课：排序检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap3.html#基于sql的数据操作",
+    "href": "chap3.html#基于sql的数据操作",
+    "title": "3  必知必会第3课：排序检索数据",
+    "section": "3.2 基于SQL的数据操作",
+    "text": "3.2 基于SQL的数据操作\n\n# 3.1\ndbGetQuery(mydb,\"SELECT prod_name\nFROM Products\nORDER BY prod_name;\") \n\n            prod_name\n1  12 inch teddy bear\n2  18 inch teddy bear\n3   8 inch teddy bear\n4   Bird bean bag toy\n5   Fish bean bag toy\n6           King doll\n7          Queen doll\n8 Rabbit bean bag toy\n9         Raggedy Ann\n\n# 3.2 \ndbGetQuery(mydb,\"SELECT prod_id, prod_price, prod_name\nFROM Products\nORDER BY prod_price, prod_name;\")\n\n  prod_id prod_price           prod_name\n1  BNBG02       3.49   Bird bean bag toy\n2  BNBG01       3.49   Fish bean bag toy\n3  BNBG03       3.49 Rabbit bean bag toy\n4  RGAN01       4.99         Raggedy Ann\n5    BR01       5.99   8 inch teddy bear\n6    BR02       8.99  12 inch teddy bear\n7   RYL01       9.49           King doll\n8   RYL02       9.49          Queen doll\n9    BR03      11.99  18 inch teddy bear\n\n# 3.3\ndbGetQuery(mydb,\"SELECT prod_id, prod_price, prod_name\nFROM Products\nORDER BY 2, 3;\")\n\n  prod_id prod_price           prod_name\n1  BNBG02       3.49   Bird bean bag toy\n2  BNBG01       3.49   Fish bean bag toy\n3  BNBG03       3.49 Rabbit bean bag toy\n4  RGAN01       4.99         Raggedy Ann\n5    BR01       5.99   8 inch teddy bear\n6    BR02       8.99  12 inch teddy bear\n7   RYL01       9.49           King doll\n8   RYL02       9.49          Queen doll\n9    BR03      11.99  18 inch teddy bear\n\n# 3.4\ndbGetQuery(mydb,\"SELECT prod_id, prod_price, prod_name\nFROM Products\nORDER BY prod_price DESC;\")\n\n  prod_id prod_price           prod_name\n1    BR03      11.99  18 inch teddy bear\n2   RYL01       9.49           King doll\n3   RYL02       9.49          Queen doll\n4    BR02       8.99  12 inch teddy bear\n5    BR01       5.99   8 inch teddy bear\n6  RGAN01       4.99         Raggedy Ann\n7  BNBG01       3.49   Fish bean bag toy\n8  BNBG02       3.49   Bird bean bag toy\n9  BNBG03       3.49 Rabbit bean bag toy\n\ndbGetQuery(mydb,\"SELECT prod_id, prod_price, prod_name\nFROM Products\nORDER BY prod_price DESC, prod_name;\")\n\n  prod_id prod_price           prod_name\n1    BR03      11.99  18 inch teddy bear\n2   RYL01       9.49           King doll\n3   RYL02       9.49          Queen doll\n4    BR02       8.99  12 inch teddy bear\n5    BR01       5.99   8 inch teddy bear\n6  RGAN01       4.99         Raggedy Ann\n7  BNBG02       3.49   Bird bean bag toy\n8  BNBG01       3.49   Fish bean bag toy\n9  BNBG03       3.49 Rabbit bean bag toy",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>必知必会第3课：排序检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap3.html#基于tidyverse的数据操作",
+    "href": "chap3.html#基于tidyverse的数据操作",
+    "title": "3  必知必会第3课：排序检索数据",
+    "section": "3.3 基于tidyverse的数据操作",
+    "text": "3.3 基于tidyverse的数据操作\n\nmydb_products = tbl(mydb,\"Products\")\n\n# 3.1\nmydb_products %&gt;%\n  select(prod_name) %&gt;% \n  arrange(prod_name)\n\n# Source:     SQL [9 x 1]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: prod_name\n  prod_name          \n  &lt;chr&gt;              \n1 12 inch teddy bear \n2 18 inch teddy bear \n3 8 inch teddy bear  \n4 Bird bean bag toy  \n5 Fish bean bag toy  \n6 King doll          \n7 Queen doll         \n8 Rabbit bean bag toy\n9 Raggedy Ann        \n\n# 3.2\nmydb_products %&gt;% \n  select(prod_id, prod_price, prod_name) %&gt;% \n  arrange(prod_price, prod_name)\n\n# Source:     SQL [9 x 3]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: prod_price, prod_name\n  prod_id prod_price prod_name          \n  &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;              \n1 BNBG02        3.49 Bird bean bag toy  \n2 BNBG01        3.49 Fish bean bag toy  \n3 BNBG03        3.49 Rabbit bean bag toy\n4 RGAN01        4.99 Raggedy Ann        \n5 BR01          5.99 8 inch teddy bear  \n6 BR02          8.99 12 inch teddy bear \n7 RYL01         9.49 King doll          \n8 RYL02         9.49 Queen doll         \n9 BR03         12.0  18 inch teddy bear \n\n# 3.4\nmydb_products %&gt;% \n  select(prod_id, prod_price, prod_name) %&gt;% \n  arrange(desc(prod_price)) \n\n# Source:     SQL [9 x 3]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: desc(prod_price)\n  prod_id prod_price prod_name          \n  &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;              \n1 BR03         12.0  18 inch teddy bear \n2 RYL01         9.49 King doll          \n3 RYL02         9.49 Queen doll         \n4 BR02          8.99 12 inch teddy bear \n5 BR01          5.99 8 inch teddy bear  \n6 RGAN01        4.99 Raggedy Ann        \n7 BNBG01        3.49 Fish bean bag toy  \n8 BNBG02        3.49 Bird bean bag toy  \n9 BNBG03        3.49 Rabbit bean bag toy\n\nmydb_products %&gt;% \n  select(prod_id, prod_price, prod_name) %&gt;% \n  arrange(desc(prod_price),prod_name)\n\n# Source:     SQL [9 x 3]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: desc(prod_price), prod_name\n  prod_id prod_price prod_name          \n  &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;              \n1 BR03         12.0  18 inch teddy bear \n2 RYL01         9.49 King doll          \n3 RYL02         9.49 Queen doll         \n4 BR02          8.99 12 inch teddy bear \n5 BR01          5.99 8 inch teddy bear  \n6 RGAN01        4.99 Raggedy Ann        \n7 BNBG02        3.49 Bird bean bag toy  \n8 BNBG01        3.49 Fish bean bag toy  \n9 BNBG03        3.49 Rabbit bean bag toy",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>必知必会第3课：排序检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap3.html#练习",
+    "href": "chap3.html#练习",
+    "title": "3  必知必会第3课：排序检索数据",
+    "section": "3.4 练习",
+    "text": "3.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>必知必会第3课：排序检索数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap4.html",
+    "href": "chap4.html",
+    "title": "4  必知必会第4课：过滤数据",
+    "section": "",
+    "text": "4.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>必知必会第4课：过滤数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap4.html#基于sql的数据操作",
+    "href": "chap4.html#基于sql的数据操作",
+    "title": "4  必知必会第4课：过滤数据",
+    "section": "4.2 基于SQL的数据操作",
+    "text": "4.2 基于SQL的数据操作\n\n# 4.1\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE prod_price = 3.49;\") \n\n            prod_name prod_price\n1   Fish bean bag toy       3.49\n2   Bird bean bag toy       3.49\n3 Rabbit bean bag toy       3.49\n\n# 4.2.1\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE prod_price &lt; 10;\") \n\n            prod_name prod_price\n1   8 inch teddy bear       5.99\n2  12 inch teddy bear       8.99\n3   Fish bean bag toy       3.49\n4   Bird bean bag toy       3.49\n5 Rabbit bean bag toy       3.49\n6         Raggedy Ann       4.99\n7           King doll       9.49\n8          Queen doll       9.49\n\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE prod_price &lt;= 10;\")\n\n            prod_name prod_price\n1   8 inch teddy bear       5.99\n2  12 inch teddy bear       8.99\n3   Fish bean bag toy       3.49\n4   Bird bean bag toy       3.49\n5 Rabbit bean bag toy       3.49\n6         Raggedy Ann       4.99\n7           King doll       9.49\n8          Queen doll       9.49\n\n# 4.2.2\ndbGetQuery(mydb,\"SELECT vend_id, prod_name\nFROM Products\nWHERE vend_id &lt;&gt; 'DLL01';\")\n\n  vend_id          prod_name\n1   BRS01  8 inch teddy bear\n2   BRS01 12 inch teddy bear\n3   BRS01 18 inch teddy bear\n4   FNG01          King doll\n5   FNG01         Queen doll\n\ndbGetQuery(mydb,\"SELECT vend_id, prod_name\nFROM Products\nWHERE vend_id != 'DLL01';\")\n\n  vend_id          prod_name\n1   BRS01  8 inch teddy bear\n2   BRS01 12 inch teddy bear\n3   BRS01 18 inch teddy bear\n4   FNG01          King doll\n5   FNG01         Queen doll\n\n# 4.2.3\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE prod_price BETWEEN 5 AND 10;\")\n\n           prod_name prod_price\n1  8 inch teddy bear       5.99\n2 12 inch teddy bear       8.99\n3          King doll       9.49\n4         Queen doll       9.49\n\n# 4.2.4\ndbGetQuery(mydb,\"SELECT prod_name\nFROM Products\nWHERE prod_price IS NULL;\")\n\n[1] prod_name\n&lt;0 rows&gt; (or 0-length row.names)\n\ndbGetQuery(mydb,\"SELECT cust_name\nFROM Customers\nWHERE cust_email IS NULL;\")\n\n   cust_name\n1 Kids Place\n2   Toy Land",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>必知必会第4课：过滤数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap4.html#基于tidyverse的数据操作",
+    "href": "chap4.html#基于tidyverse的数据操作",
+    "title": "4  必知必会第4课：过滤数据",
+    "section": "4.3 基于tidyverse的数据操作",
+    "text": "4.3 基于tidyverse的数据操作\n\n# 4.1\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_price == 3.49) %&gt;% \n  select(prod_name, prod_price)\n\n# Source:   SQL [3 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name           prod_price\n  &lt;chr&gt;                    &lt;dbl&gt;\n1 Fish bean bag toy         3.49\n2 Bird bean bag toy         3.49\n3 Rabbit bean bag toy       3.49\n\n# 4.2.1\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_price &lt; 10) %&gt;% \n  select(prod_name, prod_price)\n\n# Source:   SQL [8 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name           prod_price\n  &lt;chr&gt;                    &lt;dbl&gt;\n1 8 inch teddy bear         5.99\n2 12 inch teddy bear        8.99\n3 Fish bean bag toy         3.49\n4 Bird bean bag toy         3.49\n5 Rabbit bean bag toy       3.49\n6 Raggedy Ann               4.99\n7 King doll                 9.49\n8 Queen doll                9.49\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_price &lt;= 10) %&gt;% \n  select(prod_name, prod_price)\n\n# Source:   SQL [8 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name           prod_price\n  &lt;chr&gt;                    &lt;dbl&gt;\n1 8 inch teddy bear         5.99\n2 12 inch teddy bear        8.99\n3 Fish bean bag toy         3.49\n4 Bird bean bag toy         3.49\n5 Rabbit bean bag toy       3.49\n6 Raggedy Ann               4.99\n7 King doll                 9.49\n8 Queen doll                9.49\n\n# 4.2.2\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id != 'DLL01') %&gt;% \n  select(vend_id, prod_name)\n\n# Source:   SQL [5 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_id prod_name         \n  &lt;chr&gt;   &lt;chr&gt;             \n1 BRS01   8 inch teddy bear \n2 BRS01   12 inch teddy bear\n3 BRS01   18 inch teddy bear\n4 FNG01   King doll         \n5 FNG01   Queen doll        \n\n# 4.2.3\ntbl(mydb,\"Products\") %&gt;% \n  filter(between(prod_price,5,10)) %&gt;% \n  select(prod_name, prod_price)\n\n# Source:   SQL [4 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name          prod_price\n  &lt;chr&gt;                   &lt;dbl&gt;\n1 8 inch teddy bear        5.99\n2 12 inch teddy bear       8.99\n3 King doll                9.49\n4 Queen doll               9.49\n\n# 4.2.4\ntbl(mydb,\"Products\") %&gt;% \n  filter(is.na(prod_price)) %&gt;% \n  select(prod_name)\n\n# Source:   SQL [0 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# ℹ 1 variable: prod_name &lt;chr&gt;\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(is.na(cust_email)) %&gt;% \n  select(cust_name)\n\n# Source:   SQL [2 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_name \n  &lt;chr&gt;     \n1 Kids Place\n2 Toy Land",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>必知必会第4课：过滤数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap4.html#练习",
+    "href": "chap4.html#练习",
+    "title": "4  必知必会第4课：过滤数据",
+    "section": "4.4 练习",
+    "text": "4.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>必知必会第4课：过滤数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap5.html",
+    "href": "chap5.html",
+    "title": "5  必知必会第5课：高级数据过滤",
+    "section": "",
+    "text": "5.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>必知必会第5课：高级数据过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap5.html#基于sql的数据操作",
+    "href": "chap5.html#基于sql的数据操作",
+    "title": "5  必知必会第5课：高级数据过滤",
+    "section": "5.2 基于SQL的数据操作",
+    "text": "5.2 基于SQL的数据操作\n\n# 5.1.1\ndbGetQuery(mydb,\"SELECT prod_id, prod_price, prod_name\nFROM Products\nWHERE vend_id = 'DLL01' AND prod_price &lt;= 4;\") \n\n  prod_id prod_price           prod_name\n1  BNBG01       3.49   Fish bean bag toy\n2  BNBG02       3.49   Bird bean bag toy\n3  BNBG03       3.49 Rabbit bean bag toy\n\n# 5.1.2\ndbGetQuery(mydb,\"SELECT prod_name,prod_price\nFROM Products\nWHERE vend_id = 'DLL01' OR vend_id = 'BRS01';\")\n\n            prod_name prod_price\n1   8 inch teddy bear       5.99\n2  12 inch teddy bear       8.99\n3  18 inch teddy bear      11.99\n4   Fish bean bag toy       3.49\n5   Bird bean bag toy       3.49\n6 Rabbit bean bag toy       3.49\n7         Raggedy Ann       4.99\n\n# 5.1.3\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE vend_id = 'DLL01' OR vend_id = 'BRS01'\nAND prod_price &gt;= 10;\")\n\n            prod_name prod_price\n1  18 inch teddy bear      11.99\n2   Fish bean bag toy       3.49\n3   Bird bean bag toy       3.49\n4 Rabbit bean bag toy       3.49\n5         Raggedy Ann       4.99\n\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE (vend_id = 'DLL01' OR vend_id = 'BRS01')\nAND prod_price &gt;= 10;\")\n\n           prod_name prod_price\n1 18 inch teddy bear      11.99\n\n# 5.2\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE vend_id IN ('DLL01','BRS01')\nORDER BY prod_name;\")\n\n            prod_name prod_price\n1  12 inch teddy bear       8.99\n2  18 inch teddy bear      11.99\n3   8 inch teddy bear       5.99\n4   Bird bean bag toy       3.49\n5   Fish bean bag toy       3.49\n6 Rabbit bean bag toy       3.49\n7         Raggedy Ann       4.99\n\ndbGetQuery(mydb,\"SELECT prod_name, prod_price\nFROM Products\nWHERE vend_id = 'DLL01' OR vend_id = 'BRS01'\nORDER BY prod_name;\")\n\n            prod_name prod_price\n1  12 inch teddy bear       8.99\n2  18 inch teddy bear      11.99\n3   8 inch teddy bear       5.99\n4   Bird bean bag toy       3.49\n5   Fish bean bag toy       3.49\n6 Rabbit bean bag toy       3.49\n7         Raggedy Ann       4.99\n\n# 5.3\ndbGetQuery(mydb,\"SELECT prod_name\nFROM Products\nWHERE NOT vend_id = 'DLL01'\nORDER BY prod_name;\")\n\n           prod_name\n1 12 inch teddy bear\n2 18 inch teddy bear\n3  8 inch teddy bear\n4          King doll\n5         Queen doll\n\ndbGetQuery(mydb,\"SELECT prod_name\nFROM Products\nWHERE vend_id &lt;&gt; 'DLL01'\nORDER BY prod_name;\")\n\n           prod_name\n1 12 inch teddy bear\n2 18 inch teddy bear\n3  8 inch teddy bear\n4          King doll\n5         Queen doll",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>必知必会第5课：高级数据过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap5.html#基于tidyverse的数据操作",
+    "href": "chap5.html#基于tidyverse的数据操作",
+    "title": "5  必知必会第5课：高级数据过滤",
+    "section": "5.3 基于tidyverse的数据操作",
+    "text": "5.3 基于tidyverse的数据操作\n\n# 5.1.1\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id == 'DLL01' & prod_price &lt;= 4) %&gt;% \n  select(prod_id, prod_price, prod_name)\n\n# Source:   SQL [3 x 3]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_price prod_name          \n  &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;              \n1 BNBG01        3.49 Fish bean bag toy  \n2 BNBG02        3.49 Bird bean bag toy  \n3 BNBG03        3.49 Rabbit bean bag toy\n\n# 5.1.2\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id == 'DLL01' | vend_id == 'BRS01') %&gt;% \n  select(prod_name,prod_price)\n\n# Source:   SQL [7 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name           prod_price\n  &lt;chr&gt;                    &lt;dbl&gt;\n1 8 inch teddy bear         5.99\n2 12 inch teddy bear        8.99\n3 18 inch teddy bear       12.0 \n4 Fish bean bag toy         3.49\n5 Bird bean bag toy         3.49\n6 Rabbit bean bag toy       3.49\n7 Raggedy Ann               4.99\n\n# 5.1.3\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id == 'DLL01' | vend_id == 'BRS01' & prod_price &gt;= 10) %&gt;% \n  select(prod_name, prod_price)\n\n# Source:   SQL [5 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name           prod_price\n  &lt;chr&gt;                    &lt;dbl&gt;\n1 18 inch teddy bear       12.0 \n2 Fish bean bag toy         3.49\n3 Bird bean bag toy         3.49\n4 Rabbit bean bag toy       3.49\n5 Raggedy Ann               4.99\n\ntbl(mydb,\"Products\") %&gt;% \n  filter((vend_id == 'DLL01' | vend_id == 'BRS01') & prod_price &gt;= 10) %&gt;% \n  select(prod_name, prod_price)\n\n# Source:   SQL [1 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name          prod_price\n  &lt;chr&gt;                   &lt;dbl&gt;\n1 18 inch teddy bear       12.0\n\n# 5.2\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id %in% c('DLL01','BRS01')) %&gt;% \n  arrange(prod_name) %&gt;% \n  select(prod_name,prod_price)\n\n# Source:     SQL [7 x 2]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: prod_name\n  prod_name           prod_price\n  &lt;chr&gt;                    &lt;dbl&gt;\n1 12 inch teddy bear        8.99\n2 18 inch teddy bear       12.0 \n3 8 inch teddy bear         5.99\n4 Bird bean bag toy         3.49\n5 Fish bean bag toy         3.49\n6 Rabbit bean bag toy       3.49\n7 Raggedy Ann               4.99\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id == 'DLL01' | vend_id == 'BRS01') %&gt;% \n  arrange(prod_name) %&gt;% \n  select(prod_name,prod_price)\n\n# Source:     SQL [7 x 2]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: prod_name\n  prod_name           prod_price\n  &lt;chr&gt;                    &lt;dbl&gt;\n1 12 inch teddy bear        8.99\n2 18 inch teddy bear       12.0 \n3 8 inch teddy bear         5.99\n4 Bird bean bag toy         3.49\n5 Fish bean bag toy         3.49\n6 Rabbit bean bag toy       3.49\n7 Raggedy Ann               4.99\n\n# 5.3\ntbl(mydb,\"Products\") %&gt;% \n  filter(!vend_id == 'DLL01') %&gt;% \n  arrange(prod_name) %&gt;% \n  select(prod_name)\n\n# Source:     SQL [5 x 1]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: prod_name\n  prod_name         \n  &lt;chr&gt;             \n1 12 inch teddy bear\n2 18 inch teddy bear\n3 8 inch teddy bear \n4 King doll         \n5 Queen doll        \n\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id != 'DLL01') %&gt;% \n  arrange(prod_name) %&gt;% \n  select(prod_name)\n\n# Source:     SQL [5 x 1]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: prod_name\n  prod_name         \n  &lt;chr&gt;             \n1 12 inch teddy bear\n2 18 inch teddy bear\n3 8 inch teddy bear \n4 King doll         \n5 Queen doll",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>必知必会第5课：高级数据过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap5.html#练习",
+    "href": "chap5.html#练习",
+    "title": "5  必知必会第5课：高级数据过滤",
+    "section": "5.4 练习",
+    "text": "5.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>必知必会第5课：高级数据过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap6.html",
+    "href": "chap6.html",
+    "title": "6  必知必会第6课：用通配符进行过滤",
+    "section": "",
+    "text": "6.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>必知必会第6课：用通配符进行过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap6.html#基于sql的数据操作",
+    "href": "chap6.html#基于sql的数据操作",
+    "title": "6  必知必会第6课：用通配符进行过滤",
+    "section": "6.2 基于SQL的数据操作",
+    "text": "6.2 基于SQL的数据操作\n\n# 6.1.1\ndbGetQuery(mydb,\"SELECT prod_id, prod_name\nFROM Products\nWHERE prod_name LIKE 'Fish%';\") \n\n  prod_id         prod_name\n1  BNBG01 Fish bean bag toy\n\ndbGetQuery(mydb,\"SELECT prod_id, prod_name\nFROM Products\nWHERE prod_name LIKE '%bean bag%';\") \n\n  prod_id           prod_name\n1  BNBG01   Fish bean bag toy\n2  BNBG02   Bird bean bag toy\n3  BNBG03 Rabbit bean bag toy\n\ndbGetQuery(mydb,\"SELECT prod_name\nFROM Products\nWHERE prod_name LIKE 'F%y';\") \n\n          prod_name\n1 Fish bean bag toy\n\n# 6.1.2\ndbGetQuery(mydb,\"SELECT prod_id, prod_name\nFROM Products\nWHERE prod_name LIKE '__ inch teddy bear';\")\n\n  prod_id          prod_name\n1    BR02 12 inch teddy bear\n2    BR03 18 inch teddy bear\n\ndbGetQuery(mydb,\"SELECT prod_id, prod_name\nFROM Products\nWHERE prod_name LIKE '% inch teddy bear';\")\n\n  prod_id          prod_name\n1    BR01  8 inch teddy bear\n2    BR02 12 inch teddy bear\n3    BR03 18 inch teddy bear\n\n# 6.1.3\ndbGetQuery(mydb,\"SELECT cust_contact\nFROM Customers\nWHERE cust_contact GLOB '[JM]*'\nORDER BY cust_contact;\")\n\n    cust_contact\n1      Jim Jones\n2     John Smith\n3 Michelle Green\n\ndbGetQuery(mydb,\"SELECT cust_contact\nFROM Customers\nWHERE cust_contact GLOB '[^JM]*'\nORDER BY cust_contact;\")\n\n        cust_contact\n1 Denise L. Stephens\n2         Kim Howard",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>必知必会第6课：用通配符进行过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap6.html#sqlite-glob-子句",
+    "href": "chap6.html#sqlite-glob-子句",
+    "title": "6  必知必会第6课：用通配符进行过滤",
+    "section": "6.3 SQLite GLOB 子句",
+    "text": "6.3 SQLite GLOB 子句\nSQLite 的 GLOB 运算符是用来匹配通配符指定模式的文本值。如果搜索表达式与模式表达式匹配，GLOB 运算符将返回真（true），也就是 1。与 LIKE 运算符不同的是，GLOB 是大小写敏感的，对于下面的通配符，它遵循 UNIX 的语法。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>必知必会第6课：用通配符进行过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap6.html#基于tidyverse的数据操作",
+    "href": "chap6.html#基于tidyverse的数据操作",
+    "title": "6  必知必会第6课：用通配符进行过滤",
+    "section": "6.4 基于tidyverse的数据操作",
+    "text": "6.4 基于tidyverse的数据操作\n\n# 6.1.1\ntbl(mydb,\"Products\") %&gt;% \n  filter(str_like(prod_name,\"Fish%\")) %&gt;% \n  select(prod_id, prod_name)\n\n# Source:   SQL [1 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_name        \n  &lt;chr&gt;   &lt;chr&gt;            \n1 BNBG01  Fish bean bag toy\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_name %LIKE% \"Fish%\") %&gt;% \n  select(prod_id, prod_name)\n\n# Source:   SQL [1 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_name        \n  &lt;chr&gt;   &lt;chr&gt;            \n1 BNBG01  Fish bean bag toy\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_name %like% \"Fish%\") %&gt;% \n  select(prod_id, prod_name)\n\n# Source:   SQL [1 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_name        \n  &lt;chr&gt;   &lt;chr&gt;            \n1 BNBG01  Fish bean bag toy\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_name %like% \"%bean bag%\") %&gt;% \n  select(prod_id, prod_name)\n\n# Source:   SQL [3 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_name          \n  &lt;chr&gt;   &lt;chr&gt;              \n1 BNBG01  Fish bean bag toy  \n2 BNBG02  Bird bean bag toy  \n3 BNBG03  Rabbit bean bag toy\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_name %like% \"F%y\") %&gt;% \n  select(prod_name)\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name        \n  &lt;chr&gt;            \n1 Fish bean bag toy\n\n# 6.1.2\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_name %like% '__ inch teddy bear') %&gt;% \n  select(prod_id, prod_name)\n\n# Source:   SQL [2 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_name         \n  &lt;chr&gt;   &lt;chr&gt;             \n1 BR02    12 inch teddy bear\n2 BR03    18 inch teddy bear\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_name %like% '% inch teddy bear') %&gt;% \n  select(prod_id, prod_name)\n\n# Source:   SQL [3 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id prod_name         \n  &lt;chr&gt;   &lt;chr&gt;             \n1 BR01    8 inch teddy bear \n2 BR02    12 inch teddy bear\n3 BR03    18 inch teddy bear\n\n# 6.1.3\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_contact %glob% '[JM]*') %&gt;%  # GLOB\n  arrange(cust_contact) %&gt;% \n  select(cust_contact)\n\n# Source:     SQL [3 x 1]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: cust_contact\n  cust_contact  \n  &lt;chr&gt;         \n1 Jim Jones     \n2 John Smith    \n3 Michelle Green\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_contact %glob% '[^JM]*') %&gt;% \n  arrange(cust_contact) %&gt;% \n  select(cust_contact)\n\n# Source:     SQL [2 x 1]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: cust_contact\n  cust_contact      \n  &lt;chr&gt;             \n1 Denise L. Stephens\n2 Kim Howard",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>必知必会第6课：用通配符进行过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap6.html#注意",
+    "href": "chap6.html#注意",
+    "title": "6  必知必会第6课：用通配符进行过滤",
+    "section": "6.5 注意",
+    "text": "6.5 注意\n在 SQLite 中，LIKE 子句 不支持 [] 通配符（字符集匹配）。LIKE 的模式匹配规则仅支持两个通配符（%和_），而[] 通配符是 SQLite 中 GLOB 子句的专有通配符，用于指定一个字符集范围（或排除某些字符）。而 LIKE 仅能处理基于 SQL 标准的通配符，不能像 GLOB 那样使用字符集匹配。\n\n6.5.1 LIKE 的通配符\nSQLite 中的 LIKE 只支持两个标准通配符：\n\n%：匹配零个或多个字符。\n_：匹配单个字符。\n\n\n6.5.1.1 示例：使用 LIKE 子句\nSELECT prod_name\nFROM Products\nWHERE prod_name LIKE 'Fish%';  -- 匹配以 'Fish' 开头的所有产品\n这个查询会匹配所有以 “Fish” 开头的产品名，例如 “Fish”, “Fishing”, “Fish123” 等。\n\n\n\n6.5.2 GLOB 的通配符\n与 LIKE 不同，GLOB 允许使用额外的通配符，包括 []，它们符合 Unix 文件系统的匹配规则。例如，[] 可以匹配指定字符集中的字符。\n\n6.5.2.1 示例：使用 GLOB 子句\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish[123]';  -- 匹配 'Fish' 后面接 1、2 或 3 的产品名\n这个查询会匹配 “Fish1”, “Fish2”, “Fish3” 等产品名。\n\n\n\n6.5.3 LIKE 与 GLOB 的比较\n\n\n\n\n\n\n\n\n特性\nLIKE\nGLOB\n\n\n\n\n支持的通配符\n%（任意字符）_（单个字符）\n*（任意字符）?（单个字符）[]（字符集）\n\n\n区分大小写\n通常不区分大小写（取决于数据库配置）\n默认区分大小写\n\n\n使用场景\n模糊匹配，适合字符串的部分匹配\n文件路径匹配或字符集匹配\n\n\n\n\n\n6.5.4 如何使用 [] 匹配字符集\n如果你想在 SQLite 中使用 [] 通配符进行字符集匹配，必须使用 GLOB 子句，而不是 LIKE。例如：\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish[123]';  -- 匹配 'Fish' 后面接 1、2 或 3 的产品名\n如果你尝试在 LIKE 中使用 []，SQLite 将不会理解这个语法，并且会抛出一个错误或产生不预期的结果。\n\n\n6.5.5 总结\n\nLIKE 子句只能使用 % 和 _ 作为通配符，无法使用 [] 匹配字符集。\n如果需要使用 [] 来匹配字符集或范围，你需要使用 GLOB 子句。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>必知必会第6课：用通配符进行过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap6.html#练习",
+    "href": "chap6.html#练习",
+    "title": "6  必知必会第6课：用通配符进行过滤",
+    "section": "6.6 练习",
+    "text": "6.6 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>必知必会第6课：用通配符进行过滤</span>"
+    ]
+  },
+  {
+    "objectID": "chap7.html",
+    "href": "chap7.html",
+    "title": "7  必知必会第7课：创建计算字段",
+    "section": "",
+    "text": "7.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>必知必会第7课：创建计算字段</span>"
+    ]
+  },
+  {
+    "objectID": "chap7.html#基于sql的数据操作",
+    "href": "chap7.html#基于sql的数据操作",
+    "title": "7  必知必会第7课：创建计算字段",
+    "section": "7.2 基于SQL的数据操作",
+    "text": "7.2 基于SQL的数据操作\n\n# 7.2\ndbGetQuery(mydb,\"SELECT vend_name || '(' || vend_country || ')'\nFROM Vendors\nORDER BY vend_name;\") \n\n  vend_name || '(' || vend_country || ')'\n1                      Bear Emporium(USA)\n2                         Bears R Us(USA)\n3                    Doll House Inc.(USA)\n4                  Fun and Games(England)\n5                       Furball Inc.(USA)\n6                  Jouets et ours(France)\n\ndbGetQuery(mydb,\"SELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'\nFROM Vendors\nORDER BY vend_name;\")\n\n  RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'\n1                                    Bear Emporium (USA)\n2                                       Bears R Us (USA)\n3                                  Doll House Inc. (USA)\n4                                Fun and Games (England)\n5                                     Furball Inc. (USA)\n6                                Jouets et ours (France)\n\ndbGetQuery(mydb,\"SELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'\nAS vend_title\nFROM Vendors\nORDER BY vend_name;\")\n\n               vend_title\n1     Bear Emporium (USA)\n2        Bears R Us (USA)\n3   Doll House Inc. (USA)\n4 Fun and Games (England)\n5      Furball Inc. (USA)\n6 Jouets et ours (France)\n\n# 7.3\ndbGetQuery(mydb,\"SELECT prod_id, quantity, item_price\nFROM OrderItems\nWHERE order_num = 20008;\")\n\n  prod_id quantity item_price\n1  RGAN01        5       4.99\n2    BR03        5      11.99\n3  BNBG01       10       3.49\n4  BNBG02       10       3.49\n5  BNBG03       10       3.49\n\ndbGetQuery(mydb,\"SELECT prod_id,\nquantity,\nitem_price,\nquantity*item_price AS expanded_price\nFROM OrderItems\nWHERE order_num = 20008;\")\n\n  prod_id quantity item_price expanded_price\n1  RGAN01        5       4.99          24.95\n2    BR03        5      11.99          59.95\n3  BNBG01       10       3.49          34.90\n4  BNBG02       10       3.49          34.90\n5  BNBG03       10       3.49          34.90",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>必知必会第7课：创建计算字段</span>"
+    ]
+  },
+  {
+    "objectID": "chap7.html#基于tidyverse的数据操作",
+    "href": "chap7.html#基于tidyverse的数据操作",
+    "title": "7  必知必会第7课：创建计算字段",
+    "section": "7.3 基于tidyverse的数据操作",
+    "text": "7.3 基于tidyverse的数据操作\n\n# 7.2\ntbl(mydb,\"Vendors\") %&gt;% \n  arrange(vend_name) %&gt;% \n  transmute(vend_title = str_c(str_trim(vend_name,\"right\"),\" (\",\n                            str_trim(vend_country,\"right\"),\")\"))\n\n# Source:   SQL [6 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_title             \n  &lt;chr&gt;                  \n1 Bear Emporium (USA)    \n2 Bears R Us (USA)       \n3 Doll House Inc. (USA)  \n4 Fun and Games (England)\n5 Furball Inc. (USA)     \n6 Jouets et ours (France)\n\n# 7.3\ntbl(mydb,\"OrderItems\") %&gt;% \n  filter(order_num == 20008) %&gt;% \n  transmute(prod_id,quantity,item_price,\n            expanded_price = quantity * item_price)\n\n# Source:   SQL [5 x 4]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_id quantity item_price expanded_price\n  &lt;chr&gt;      &lt;int&gt;      &lt;dbl&gt;          &lt;dbl&gt;\n1 RGAN01         5       4.99           25.0\n2 BR03           5      12.0            60.0\n3 BNBG01        10       3.49           34.9\n4 BNBG02        10       3.49           34.9\n5 BNBG03        10       3.49           34.9",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>必知必会第7课：创建计算字段</span>"
+    ]
+  },
+  {
+    "objectID": "chap7.html#练习",
+    "href": "chap7.html#练习",
+    "title": "7  必知必会第7课：创建计算字段",
+    "section": "7.4 练习",
+    "text": "7.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>必知必会第7课：创建计算字段</span>"
+    ]
+  },
+  {
+    "objectID": "chap8.html",
+    "href": "chap8.html",
+    "title": "8  必知必会第8课：使用函数处理数据",
+    "section": "",
+    "text": "8.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>必知必会第8课：使用函数处理数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap8.html#基于sql的数据操作",
+    "href": "chap8.html#基于sql的数据操作",
+    "title": "8  必知必会第8课：使用函数处理数据",
+    "section": "8.2 基于SQL的数据操作",
+    "text": "8.2 基于SQL的数据操作\n\n# 8.2.1\ndbGetQuery(mydb,\"SELECT vend_name, UPPER(vend_name) AS vend_name_upcase\nFROM Vendors\nORDER BY vend_name;\") \n\n        vend_name vend_name_upcase\n1   Bear Emporium    BEAR EMPORIUM\n2      Bears R Us       BEARS R US\n3 Doll House Inc.  DOLL HOUSE INC.\n4   Fun and Games    FUN AND GAMES\n5    Furball Inc.     FURBALL INC.\n6  Jouets et ours   JOUETS ET OURS\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact\nFROM Customers\nWHERE cust_contact = 'Michael Green';\")\n\n[1] cust_name    cust_contact\n&lt;0 rows&gt; (or 0-length row.names)\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact\nFROM Customers\nWHERE SOUNDEX(cust_contact) = SOUNDEX('Michael Green');\")\n\n   cust_name   cust_contact\n1 Kids Place Michelle Green\n\n# 8.2.2\ndbGetQuery(mydb,\"SELECT order_num\nFROM Orders\nWHERE strftime('%Y', order_date) = '2020';\")\n\n  order_num\n1     20005\n2     20006\n3     20007\n4     20008\n5     20009",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>必知必会第8课：使用函数处理数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap8.html#基于tidyverse的数据操作",
+    "href": "chap8.html#基于tidyverse的数据操作",
+    "title": "8  必知必会第8课：使用函数处理数据",
+    "section": "8.3 基于tidyverse的数据操作",
+    "text": "8.3 基于tidyverse的数据操作\n\n# 8.2.1\ntbl(mydb,\"Vendors\") %&gt;% \n  transmute(vend_name,vend_name_upcase = str_to_upper(vend_name)) %&gt;% \n  arrange(vend_name)\n\n# Source:     SQL [6 x 2]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: vend_name\n  vend_name       vend_name_upcase\n  &lt;chr&gt;           &lt;chr&gt;           \n1 Bear Emporium   BEAR EMPORIUM   \n2 Bears R Us      BEARS R US      \n3 Doll House Inc. DOLL HOUSE INC. \n4 Fun and Games   FUN AND GAMES   \n5 Furball Inc.    FURBALL INC.    \n6 Jouets et ours  JOUETS ET OURS  \n\n# 8.2.2\ntbl(mydb,\"Orders\") %&gt;% \n  filter(year(order_date) == 2020) %&gt;% \n  select(order_num)\n\n# Source:   SQL [5 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  order_num\n      &lt;int&gt;\n1     20005\n2     20006\n3     20007\n4     20008\n5     20009",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>必知必会第8课：使用函数处理数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap8.html#练习",
+    "href": "chap8.html#练习",
+    "title": "8  必知必会第8课：使用函数处理数据",
+    "section": "8.4 练习",
+    "text": "8.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>必知必会第8课：使用函数处理数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap9.html",
+    "href": "chap9.html",
+    "title": "9  必知必会第9课：汇总数据",
+    "section": "",
+    "text": "9.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>必知必会第9课：汇总数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap9.html#基于sql的数据操作",
+    "href": "chap9.html#基于sql的数据操作",
+    "title": "9  必知必会第9课：汇总数据",
+    "section": "9.2 基于SQL的数据操作",
+    "text": "9.2 基于SQL的数据操作\n\n# 9.1.1\ndbGetQuery(mydb,\"SELECT AVG(prod_price) AS avg_price\nFROM Products;\") \n\n  avg_price\n1  6.823333\n\ndbGetQuery(mydb,\"SELECT AVG(prod_price) AS avg_price\nFROM Products\nWHERE vend_id = 'DLL01';\")\n\n  avg_price\n1     3.865\n\n# 9.1.2\ndbGetQuery(mydb,\"SELECT COUNT(*) AS num_cust\nFROM Customers;\")\n\n  num_cust\n1        6\n\ndbGetQuery(mydb,\"SELECT COUNT(cust_email) AS num_cust\nFROM Customers;\")\n\n  num_cust\n1        4\n\n# 9.1.3\ndbGetQuery(mydb,\"SELECT MAX(prod_price) AS max_price\nFROM Products;\")\n\n  max_price\n1     11.99\n\n# 9.1.4\ndbGetQuery(mydb,\"SELECT MIN(prod_price) AS min_price\nFROM Products;\")\n\n  min_price\n1      3.49\n\n# 9.1.5\ndbGetQuery(mydb,\"SELECT SUM(quantity) AS items_ordered\nFROM OrderItems\nWHERE order_num = 20005;\")\n\n  items_ordered\n1           200\n\ndbGetQuery(mydb,\"SELECT SUM(item_price*quantity) AS total_price\nFROM OrderItems\nWHERE order_num = 20005;\")\n\n  total_price\n1        1648\n\n# 9.2\ndbGetQuery(mydb,\"SELECT AVG(DISTINCT prod_price) AS avg_price\nFROM Products\nWHERE vend_id = 'DLL01';\")\n\n  avg_price\n1      4.24\n\n# 9.3\ndbGetQuery(mydb,\"SELECT COUNT(*) AS num_items,\nMIN(prod_price) AS price_min,\nMAX(prod_price) AS price_max,\nAVG(prod_price) AS price_avg\nFROM Products;\")\n\n  num_items price_min price_max price_avg\n1         9      3.49     11.99  6.823333",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>必知必会第9课：汇总数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap9.html#基于tidyverse的数据操作",
+    "href": "chap9.html#基于tidyverse的数据操作",
+    "title": "9  必知必会第9课：汇总数据",
+    "section": "9.3 基于tidyverse的数据操作",
+    "text": "9.3 基于tidyverse的数据操作\n\n# 9.1.1\ntbl(mydb,\"Products\") %&gt;% \n  summarise(avg_price = mean(prod_price,na.rm = TRUE))\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  avg_price\n      &lt;dbl&gt;\n1      6.82\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id == 'DLL01') %&gt;% \n  summarise(avg_price = mean(prod_price,na.rm = TRUE))\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  avg_price\n      &lt;dbl&gt;\n1      3.86\n\n# 9.1.2\ntbl(mydb,\"Customers\") %&gt;% \n  tally(name = \"num_cust\")\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  num_cust\n     &lt;int&gt;\n1        6\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(!is.na(cust_email)) %&gt;% \n  tally(name = \"num_cust\")\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  num_cust\n     &lt;int&gt;\n1        4\n\n# 9.1.3\ntbl(mydb,\"Products\") %&gt;% \n  summarise(max_price = max(prod_price))\n\nWarning: Missing values are always removed in SQL aggregation functions.\nUse `na.rm = TRUE` to silence this warning\nThis warning is displayed once every 8 hours.\n\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  max_price\n      &lt;dbl&gt;\n1      12.0\n\n# 9.1.4\ntbl(mydb,\"Products\") %&gt;% \n  summarise(min_price = min(prod_price))\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  min_price\n      &lt;dbl&gt;\n1      3.49\n\n# 9.1.5\ntbl(mydb,\"OrderItems\") %&gt;% \n  filter(order_num == 20005) %&gt;% \n  summarise(items_ordered = sum(quantity))\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  items_ordered\n          &lt;int&gt;\n1           200\n\ntbl(mydb,\"OrderItems\") %&gt;% \n  filter(order_num == 20005) %&gt;% \n  summarise(total_price = sum(item_price * quantity))\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  total_price\n        &lt;dbl&gt;\n1        1648\n\n# 9.2\ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id == 'DLL01') %&gt;% \n  summarise(avg_price = mean(distinct(prod_price))) \n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  avg_price\n      &lt;dbl&gt;\n1      4.24\n\n# 9.3\ntbl(mydb,\"Products\") %&gt;% \n  summarise(\n    num_items = n(),\n    price_min = min(prod_price),\n    price_max = max(prod_price),\n    price_avg = mean(prod_price)\n  )\n\n# Source:   SQL [1 x 4]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  num_items price_min price_max price_avg\n      &lt;int&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;\n1         9      3.49      12.0      6.82",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>必知必会第9课：汇总数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap9.html#练习",
+    "href": "chap9.html#练习",
+    "title": "9  必知必会第9课：汇总数据",
+    "section": "9.4 练习",
+    "text": "9.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>必知必会第9课：汇总数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap10.html",
+    "href": "chap10.html",
+    "title": "10  必知必会第10课：分组数据",
+    "section": "",
+    "text": "10.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>必知必会第10课：分组数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap10.html#基于sql的数据操作",
+    "href": "chap10.html#基于sql的数据操作",
+    "title": "10  必知必会第10课：分组数据",
+    "section": "10.2 基于SQL的数据操作",
+    "text": "10.2 基于SQL的数据操作\n\n# 10.1\ndbGetQuery(mydb,\"SELECT COUNT(*) AS num_prods\nFROM Products\nWHERE vend_id = 'DLL01';\") \n\n  num_prods\n1         4\n\n# 10.2 \ndbGetQuery(mydb,\"SELECT vend_id, COUNT(*) AS num_prods\nFROM Products\nGROUP BY vend_id;\")\n\n  vend_id num_prods\n1   BRS01         3\n2   DLL01         4\n3   FNG01         2\n\n# 10.3\ndbGetQuery(mydb,\"SELECT cust_id, COUNT(*) AS orders\nFROM Orders\nGROUP BY cust_id\nHAVING COUNT(*) &gt;= 2;\")\n\n     cust_id orders\n1 1000000001      2\n\ndbGetQuery(mydb,\"SELECT vend_id, COUNT(*) AS num_prods\nFROM Products\nWHERE prod_price &gt;= 4\nGROUP BY vend_id\nHAVING COUNT(*) &gt;= 2;\")\n\n  vend_id num_prods\n1   BRS01         3\n2   FNG01         2\n\ndbGetQuery(mydb,\"SELECT vend_id, COUNT(*) AS num_prods\nFROM Products\nGROUP BY vend_id\nHAVING COUNT(*) &gt;= 2;\")\n\n  vend_id num_prods\n1   BRS01         3\n2   DLL01         4\n3   FNG01         2\n\n# 10.4\ndbGetQuery(mydb,\"SELECT order_num, COUNT(*) AS items\nFROM OrderItems\nGROUP BY order_num\nHAVING COUNT(*) &gt;= 3;\")\n\n  order_num items\n1     20006     3\n2     20007     5\n3     20008     5\n4     20009     3\n\ndbGetQuery(mydb,\"SELECT order_num, COUNT(*) AS items\nFROM OrderItems\nGROUP BY order_num\nHAVING COUNT(*) &gt;= 3\nORDER BY items, order_num;\")\n\n  order_num items\n1     20006     3\n2     20009     3\n3     20007     5\n4     20008     5",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>必知必会第10课：分组数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap10.html#基于tidyverse的数据操作",
+    "href": "chap10.html#基于tidyverse的数据操作",
+    "title": "10  必知必会第10课：分组数据",
+    "section": "10.3 基于tidyverse的数据操作",
+    "text": "10.3 基于tidyverse的数据操作\n\n# 10.1 \ntbl(mydb,\"Products\") %&gt;% \n  filter(vend_id == 'DLL01') %&gt;% \n  tally(name = \"num_prods\")\n\n# Source:   SQL [1 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  num_prods\n      &lt;int&gt;\n1         4\n\n# 10.2\ntbl(mydb,\"Products\") %&gt;% \n  group_by(vend_id) %&gt;% \n  tally(name = \"num_prods\")\n\n# Source:   SQL [3 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_id num_prods\n  &lt;chr&gt;       &lt;int&gt;\n1 BRS01           3\n2 DLL01           4\n3 FNG01           2\n\n# 10.3\ntbl(mydb,\"Orders\") %&gt;% \n  summarise(orders = n(),.by = cust_id) %&gt;% \n  filter(orders &gt;= 2)\n\n# Source:   SQL [1 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    orders\n  &lt;chr&gt;       &lt;int&gt;\n1 1000000001      2\n\ntbl(mydb,\"Products\") %&gt;% \n  filter(prod_price &gt;= 4) %&gt;%  # WHERE\n  group_by(vend_id) %&gt;% \n  summarise(num_prods = n()) %&gt;% \n  filter(num_prods &gt;= 2)  # HAVING\n\n# Source:   SQL [2 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_id num_prods\n  &lt;chr&gt;       &lt;int&gt;\n1 BRS01           3\n2 FNG01           2\n\ntbl(mydb,\"Products\") %&gt;% \n  group_by(vend_id) %&gt;% \n  summarise(num_prods = n()) %&gt;% \n  filter(num_prods &gt;= 2)  \n\n# Source:   SQL [3 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_id num_prods\n  &lt;chr&gt;       &lt;int&gt;\n1 BRS01           3\n2 DLL01           4\n3 FNG01           2\n\n# 10.4\ntbl(mydb,\"OrderItems\") %&gt;% \n  group_by(order_num) %&gt;% \n  tally(name = \"items\") %&gt;% \n  filter(items &gt;=3)\n\n# Source:   SQL [4 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  order_num items\n      &lt;int&gt; &lt;int&gt;\n1     20006     3\n2     20007     5\n3     20008     5\n4     20009     3\n\ntbl(mydb,\"OrderItems\") %&gt;% \n  group_by(order_num) %&gt;% \n  tally(name = \"items\") %&gt;% \n  filter(items &gt;=3) %&gt;% \n  arrange(items,order_num)\n\n# Source:     SQL [4 x 2]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: items, order_num\n  order_num items\n      &lt;int&gt; &lt;int&gt;\n1     20006     3\n2     20009     3\n3     20007     5\n4     20008     5",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>必知必会第10课：分组数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap10.html#练习",
+    "href": "chap10.html#练习",
+    "title": "10  必知必会第10课：分组数据",
+    "section": "10.4 练习",
+    "text": "10.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>必知必会第10课：分组数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap11.html",
+    "href": "chap11.html",
+    "title": "11  必知必会第11课：使用子查询",
+    "section": "",
+    "text": "11.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>必知必会第11课：使用子查询</span>"
+    ]
+  },
+  {
+    "objectID": "chap11.html#基于sql的数据操作",
+    "href": "chap11.html#基于sql的数据操作",
+    "title": "11  必知必会第11课：使用子查询",
+    "section": "11.2 基于SQL的数据操作",
+    "text": "11.2 基于SQL的数据操作\n\n# 11.2\ndbGetQuery(mydb,\"SELECT order_num\nFROM OrderItems\nWHERE prod_id = 'RGAN01';\") \n\n  order_num\n1     20007\n2     20008\n\ndbGetQuery(mydb,\"SELECT cust_id\nFROM Orders\nWHERE order_num IN (20007,20008);\")\n\n     cust_id\n1 1000000004\n2 1000000005\n\ndbGetQuery(mydb,\"SELECT cust_id\nFROM Orders\nWHERE order_num IN (SELECT order_num\nFROM OrderItems\nWHERE prod_id = 'RGAN01');\")\n\n     cust_id\n1 1000000004\n2 1000000005\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact\nFROM Customers\nWHERE cust_id IN (1000000004,1000000005);\")\n\n      cust_name       cust_contact\n1       Fun4All Denise L. Stephens\n2 The Toy Store         Kim Howard\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact\nFROM Customers\nWHERE cust_id IN (SELECT cust_id\nFROM Orders\nWHERE order_num IN (SELECT order_num\nFROM OrderItems\nWHERE prod_id = 'RGAN01'));\")\n\n      cust_name       cust_contact\n1       Fun4All Denise L. Stephens\n2 The Toy Store         Kim Howard\n\n# 11.3\ndbGetQuery(mydb,\"SELECT COUNT(*) AS orders\nFROM Orders\nWHERE cust_id = 1000000001;\")\n\n  orders\n1      2\n\ndbGetQuery(mydb,\"SELECT cust_name,\ncust_state,\n(SELECT COUNT(*)\nFROM Orders\nWHERE Orders.cust_id = Customers.cust_id) AS orders\nFROM Customers\nORDER BY cust_name;\")\n\n      cust_name cust_state orders\n1       Fun4All         IN      1\n2       Fun4All         AZ      1\n3    Kids Place         OH      0\n4 The Toy Store         IL      1\n5      Toy Land         NY      0\n6  Village Toys         MI      2\n\ndbGetQuery(mydb,\"SELECT cust_name,\ncust_state,\n(SELECT COUNT(*)\nFROM Orders\nWHERE cust_id = cust_id) AS orders\nFROM Customers\nORDER BY cust_name;\")\n\n      cust_name cust_state orders\n1       Fun4All         IN      5\n2       Fun4All         AZ      5\n3    Kids Place         OH      5\n4 The Toy Store         IL      5\n5      Toy Land         NY      5\n6  Village Toys         MI      5",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>必知必会第11课：使用子查询</span>"
+    ]
+  },
+  {
+    "objectID": "chap11.html#基于tidyverse的数据操作",
+    "href": "chap11.html#基于tidyverse的数据操作",
+    "title": "11  必知必会第11课：使用子查询",
+    "section": "11.3 基于tidyverse的数据操作",
+    "text": "11.3 基于tidyverse的数据操作\n\n# 11.2\ntbl(mydb,\"OrderItems\") %&gt;% \n  filter(prod_id == 'RGAN01') %&gt;% \n  pull(order_num) -&gt; query1\ntbl(mydb,\"Orders\") %&gt;% \n  filter(order_num %in% query1) %&gt;% \n  pull(cust_id) -&gt; query2\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_id %in% query2) %&gt;% \n  select(cust_name, cust_contact) \n\n# Source:   SQL [2 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_name     cust_contact      \n  &lt;chr&gt;         &lt;chr&gt;             \n1 Fun4All       Denise L. Stephens\n2 The Toy Store Kim Howard        \n\n# 11.3\ntbl(mydb,\"Orders\") %&gt;% \n  count(cust_id,name = \"orders\") -&gt; query4\ntbl(mydb,\"Customers\") %&gt;% \n  select(cust_name,cust_state,cust_id) %&gt;% \n  left_join(query4) %&gt;% \n  arrange(cust_name) \n\nJoining with `by = join_by(cust_id)`\n\n\n# Source:     SQL [6 x 4]\n# Database:   sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: cust_name\n  cust_name     cust_state cust_id    orders\n  &lt;chr&gt;         &lt;chr&gt;      &lt;chr&gt;       &lt;int&gt;\n1 Fun4All       IN         1000000003      1\n2 Fun4All       AZ         1000000004      1\n3 Kids Place    OH         1000000002     NA\n4 The Toy Store IL         1000000005      1\n5 Toy Land      NY         1000000006     NA\n6 Village Toys  MI         1000000001      2",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>必知必会第11课：使用子查询</span>"
+    ]
+  },
+  {
+    "objectID": "chap11.html#练习",
+    "href": "chap11.html#练习",
+    "title": "11  必知必会第11课：使用子查询",
+    "section": "11.4 练习",
+    "text": "11.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>必知必会第11课：使用子查询</span>"
+    ]
+  },
+  {
+    "objectID": "chap12.html",
+    "href": "chap12.html",
+    "title": "12  必知必会第12课：联结表",
+    "section": "",
+    "text": "12.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>必知必会第12课：联结表</span>"
+    ]
+  },
+  {
+    "objectID": "chap12.html#基于sql和tidyverse的数据操作",
+    "href": "chap12.html#基于sql和tidyverse的数据操作",
+    "title": "12  必知必会第12课：联结表",
+    "section": "12.2 基于SQL和tidyverse的数据操作",
+    "text": "12.2 基于SQL和tidyverse的数据操作\n\n# 12.2\ndbGetQuery(mydb,\"SELECT vend_name, prod_name, prod_price\nFROM Vendors, Products\nWHERE Vendors.vend_id = Products.vend_id;\") \n\n        vend_name           prod_name prod_price\n1      Bears R Us   8 inch teddy bear       5.99\n2      Bears R Us  12 inch teddy bear       8.99\n3      Bears R Us  18 inch teddy bear      11.99\n4 Doll House Inc.   Fish bean bag toy       3.49\n5 Doll House Inc.   Bird bean bag toy       3.49\n6 Doll House Inc. Rabbit bean bag toy       3.49\n7 Doll House Inc.         Raggedy Ann       4.99\n8   Fun and Games           King doll       9.49\n9   Fun and Games          Queen doll       9.49\n\ntbl(mydb,\"Vendors\") %&gt;% \n  select(vend_name,vend_id) %&gt;% \n  inner_join(\n    tbl(mydb,\"Products\") %&gt;% \n      select(prod_name,prod_price,vend_id)\n  ) %&gt;% \n  select(-vend_id) \n\nJoining with `by = join_by(vend_id)`\n\n\n# Source:   SQL [9 x 3]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_name       prod_name           prod_price\n  &lt;chr&gt;           &lt;chr&gt;                    &lt;dbl&gt;\n1 Bears R Us      8 inch teddy bear         5.99\n2 Bears R Us      12 inch teddy bear        8.99\n3 Bears R Us      18 inch teddy bear       12.0 \n4 Doll House Inc. Fish bean bag toy         3.49\n5 Doll House Inc. Bird bean bag toy         3.49\n6 Doll House Inc. Rabbit bean bag toy       3.49\n7 Doll House Inc. Raggedy Ann               4.99\n8 Fun and Games   King doll                 9.49\n9 Fun and Games   Queen doll                9.49\n\n# 12.2.1\ndbGetQuery(mydb,\"SELECT vend_name, prod_name, prod_price\nFROM Vendors, Products;\")\n\n         vend_name           prod_name prod_price\n1       Bears R Us   8 inch teddy bear       5.99\n2       Bears R Us  12 inch teddy bear       8.99\n3       Bears R Us  18 inch teddy bear      11.99\n4       Bears R Us   Fish bean bag toy       3.49\n5       Bears R Us   Bird bean bag toy       3.49\n6       Bears R Us Rabbit bean bag toy       3.49\n7       Bears R Us         Raggedy Ann       4.99\n8       Bears R Us           King doll       9.49\n9       Bears R Us          Queen doll       9.49\n10   Bear Emporium   8 inch teddy bear       5.99\n11   Bear Emporium  12 inch teddy bear       8.99\n12   Bear Emporium  18 inch teddy bear      11.99\n13   Bear Emporium   Fish bean bag toy       3.49\n14   Bear Emporium   Bird bean bag toy       3.49\n15   Bear Emporium Rabbit bean bag toy       3.49\n16   Bear Emporium         Raggedy Ann       4.99\n17   Bear Emporium           King doll       9.49\n18   Bear Emporium          Queen doll       9.49\n19 Doll House Inc.   8 inch teddy bear       5.99\n20 Doll House Inc.  12 inch teddy bear       8.99\n21 Doll House Inc.  18 inch teddy bear      11.99\n22 Doll House Inc.   Fish bean bag toy       3.49\n23 Doll House Inc.   Bird bean bag toy       3.49\n24 Doll House Inc. Rabbit bean bag toy       3.49\n25 Doll House Inc.         Raggedy Ann       4.99\n26 Doll House Inc.           King doll       9.49\n27 Doll House Inc.          Queen doll       9.49\n28    Furball Inc.   8 inch teddy bear       5.99\n29    Furball Inc.  12 inch teddy bear       8.99\n30    Furball Inc.  18 inch teddy bear      11.99\n31    Furball Inc.   Fish bean bag toy       3.49\n32    Furball Inc.   Bird bean bag toy       3.49\n33    Furball Inc. Rabbit bean bag toy       3.49\n34    Furball Inc.         Raggedy Ann       4.99\n35    Furball Inc.           King doll       9.49\n36    Furball Inc.          Queen doll       9.49\n37   Fun and Games   8 inch teddy bear       5.99\n38   Fun and Games  12 inch teddy bear       8.99\n39   Fun and Games  18 inch teddy bear      11.99\n40   Fun and Games   Fish bean bag toy       3.49\n41   Fun and Games   Bird bean bag toy       3.49\n42   Fun and Games Rabbit bean bag toy       3.49\n43   Fun and Games         Raggedy Ann       4.99\n44   Fun and Games           King doll       9.49\n45   Fun and Games          Queen doll       9.49\n46  Jouets et ours   8 inch teddy bear       5.99\n47  Jouets et ours  12 inch teddy bear       8.99\n48  Jouets et ours  18 inch teddy bear      11.99\n49  Jouets et ours   Fish bean bag toy       3.49\n50  Jouets et ours   Bird bean bag toy       3.49\n51  Jouets et ours Rabbit bean bag toy       3.49\n52  Jouets et ours         Raggedy Ann       4.99\n53  Jouets et ours           King doll       9.49\n54  Jouets et ours          Queen doll       9.49\n\ntbl(mydb,\"Vendors\") %&gt;% \n  select(vend_name) %&gt;% \n  cross_join(tbl(mydb,\"Products\") %&gt;% \n               select(prod_name,prod_price)) %&gt;% \n  collect()\n\n# A tibble: 54 × 3\n   vend_name     prod_name           prod_price\n   &lt;chr&gt;         &lt;chr&gt;                    &lt;dbl&gt;\n 1 Bears R Us    8 inch teddy bear         5.99\n 2 Bears R Us    12 inch teddy bear        8.99\n 3 Bears R Us    18 inch teddy bear       12.0 \n 4 Bears R Us    Fish bean bag toy         3.49\n 5 Bears R Us    Bird bean bag toy         3.49\n 6 Bears R Us    Rabbit bean bag toy       3.49\n 7 Bears R Us    Raggedy Ann               4.99\n 8 Bears R Us    King doll                 9.49\n 9 Bears R Us    Queen doll                9.49\n10 Bear Emporium 8 inch teddy bear         5.99\n# ℹ 44 more rows\n\n# 12.2.2\ndbGetQuery(mydb,\"SELECT vend_name, prod_name, prod_price\nFROM Vendors\nINNER JOIN Products ON Vendors.vend_id = Products.vend_id;\")\n\n        vend_name           prod_name prod_price\n1      Bears R Us   8 inch teddy bear       5.99\n2      Bears R Us  12 inch teddy bear       8.99\n3      Bears R Us  18 inch teddy bear      11.99\n4 Doll House Inc.   Fish bean bag toy       3.49\n5 Doll House Inc.   Bird bean bag toy       3.49\n6 Doll House Inc. Rabbit bean bag toy       3.49\n7 Doll House Inc.         Raggedy Ann       4.99\n8   Fun and Games           King doll       9.49\n9   Fun and Games          Queen doll       9.49\n\ntbl(mydb,\"Vendors\") %&gt;% \n  select(vend_name,vend_id) %&gt;% \n  inner_join(\n    tbl(mydb,\"Products\") %&gt;% \n      select(prod_name,prod_price,vend_id)\n  ) %&gt;% \n  select(-vend_id) \n\nJoining with `by = join_by(vend_id)`\n\n\n# Source:   SQL [9 x 3]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_name       prod_name           prod_price\n  &lt;chr&gt;           &lt;chr&gt;                    &lt;dbl&gt;\n1 Bears R Us      8 inch teddy bear         5.99\n2 Bears R Us      12 inch teddy bear        8.99\n3 Bears R Us      18 inch teddy bear       12.0 \n4 Doll House Inc. Fish bean bag toy         3.49\n5 Doll House Inc. Bird bean bag toy         3.49\n6 Doll House Inc. Rabbit bean bag toy       3.49\n7 Doll House Inc. Raggedy Ann               4.99\n8 Fun and Games   King doll                 9.49\n9 Fun and Games   Queen doll                9.49\n\n# 12.2.3\ndbGetQuery(mydb,\"SELECT prod_name, vend_name, prod_price, quantity\nFROM OrderItems, Products, Vendors\nWHERE Products.vend_id = Vendors.vend_id\nAND OrderItems.prod_id = Products.prod_id\nAND order_num = 20007;\")\n\n            prod_name       vend_name prod_price quantity\n1  18 inch teddy bear      Bears R Us      11.99       50\n2   Fish bean bag toy Doll House Inc.       3.49      100\n3   Bird bean bag toy Doll House Inc.       3.49      100\n4 Rabbit bean bag toy Doll House Inc.       3.49      100\n5         Raggedy Ann Doll House Inc.       4.99       50\n\ntbl(mydb,\"Products\") %&gt;% \n  select(prod_id,prod_name,prod_price,vend_id) %&gt;% \n  inner_join(\n    tbl(mydb,\"Vendors\") %&gt;% \n      select(vend_id,vend_name)\n  ) %&gt;% \n  inner_join(\n    tbl(mydb,\"OrderItems\") %&gt;% \n      filter(order_num == 20007) %&gt;% \n      select(prod_id,quantity)\n  ) %&gt;% \n  transmute(prod_name,vend_name,prod_price,quantity)\n\nJoining with `by = join_by(vend_id)`\nJoining with `by = join_by(prod_id)`\n\n\n# Source:   SQL [5 x 4]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  prod_name           vend_name       prod_price quantity\n  &lt;chr&gt;               &lt;chr&gt;                &lt;dbl&gt;    &lt;int&gt;\n1 18 inch teddy bear  Bears R Us           12.0        50\n2 Fish bean bag toy   Doll House Inc.       3.49      100\n3 Bird bean bag toy   Doll House Inc.       3.49      100\n4 Rabbit bean bag toy Doll House Inc.       3.49      100\n5 Raggedy Ann         Doll House Inc.       4.99       50\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact\nFROM Customers, Orders, OrderItems\nWHERE Customers.cust_id = Orders.cust_id\nAND OrderItems.order_num = Orders.order_num\nAND prod_id = 'RGAN01';\")\n\n      cust_name       cust_contact\n1       Fun4All Denise L. Stephens\n2 The Toy Store         Kim Howard\n\ntbl(mydb,\"Customers\") %&gt;% select(cust_name, cust_contact,cust_id) %&gt;% \n  inner_join(\n    tbl(mydb,\"Orders\") %&gt;% select(order_num,cust_id)\n  ) %&gt;% \n  inner_join(\n    tbl(mydb,\"OrderItems\") %&gt;% \n      filter(prod_id == 'RGAN01')%&gt;%\n      select(order_num)\n  ) %&gt;% select(cust_name, cust_contact)\n\nJoining with `by = join_by(cust_id)`\nJoining with `by = join_by(order_num)`\n\n\n# Source:   SQL [2 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_name     cust_contact      \n  &lt;chr&gt;         &lt;chr&gt;             \n1 Fun4All       Denise L. Stephens\n2 The Toy Store Kim Howard",
+    "crumbs": [
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>必知必会第12课：联结表</span>"
+    ]
+  },
+  {
+    "objectID": "chap12.html#练习",
+    "href": "chap12.html#练习",
+    "title": "12  必知必会第12课：联结表",
+    "section": "12.3 练习",
+    "text": "12.3 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>必知必会第12课：联结表</span>"
+    ]
+  },
+  {
+    "objectID": "chap13.html",
+    "href": "chap13.html",
+    "title": "13  必知必会第13课：创建高级联结",
+    "section": "",
+    "text": "13.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>13</span>  <span class='chapter-title'>必知必会第13课：创建高级联结</span>"
+    ]
+  },
+  {
+    "objectID": "chap13.html#基于sql和tidyverse的数据操作",
+    "href": "chap13.html#基于sql和tidyverse的数据操作",
+    "title": "13  必知必会第13课：创建高级联结",
+    "section": "13.2 基于SQL和tidyverse的数据操作",
+    "text": "13.2 基于SQL和tidyverse的数据操作\n\n# 13.1\ndbGetQuery(mydb,\"SELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'\nAS vend_title\nFROM Vendors\nORDER BY vend_name;\") \n\n               vend_title\n1     Bear Emporium (USA)\n2        Bears R Us (USA)\n3   Doll House Inc. (USA)\n4 Fun and Games (England)\n5      Furball Inc. (USA)\n6 Jouets et ours (France)\n\ntbl(mydb,\"Vendors\") %&gt;% \n  arrange(vend_name) %&gt;% \n  transmute(vend_title = str_c(\n    str_trim(vend_name,\"right\"),\" (\",\n    str_trim(vend_country),\")\"\n  )) \n\n# Source:   SQL [6 x 1]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  vend_title             \n  &lt;chr&gt;                  \n1 Bear Emporium (USA)    \n2 Bears R Us (USA)       \n3 Doll House Inc. (USA)  \n4 Fun and Games (England)\n5 Furball Inc. (USA)     \n6 Jouets et ours (France)\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact\nFROM Customers AS C, Orders AS O, OrderItems AS OI\nWHERE C.cust_id = O.cust_id\nAND OI.order_num = O.order_num\nAND prod_id = 'RGAN01';\")\n\n      cust_name       cust_contact\n1       Fun4All Denise L. Stephens\n2 The Toy Store         Kim Howard\n\ntbl(mydb,\"Customers\") -&gt; C\ntbl(mydb,\"Orders\") -&gt; O\ntbl(mydb,\"OrderItems\") -&gt; OI\nC %&gt;% inner_join(O,by = \"cust_id\") %&gt;% \n  inner_join(OI,by = \"order_num\") %&gt;% \n  filter(prod_id == 'RGAN01') %&gt;% \n  select(cust_name,cust_contact)\n\n# Source:   SQL [2 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_name     cust_contact      \n  &lt;chr&gt;         &lt;chr&gt;             \n1 Fun4All       Denise L. Stephens\n2 The Toy Store Kim Howard        \n\n# 13.2\ndbGetQuery(mydb,\"SELECT cust_id, cust_name, cust_contact\nFROM Customers\nWHERE cust_name = (SELECT cust_name\nFROM Customers\nWHERE cust_contact = 'Jim Jones');\")\n\n     cust_id cust_name       cust_contact\n1 1000000003   Fun4All          Jim Jones\n2 1000000004   Fun4All Denise L. Stephens\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_contact == 'Jim Jones') %&gt;% \n  pull(cust_name) -&gt; query1\ntbl(mydb,\"Customers\") %&gt;% \n  select(cust_id, cust_name, cust_contact) %&gt;% \n  filter(cust_name == query1)\n\n# Source:   SQL [2 x 3]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    cust_name cust_contact      \n  &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;             \n1 1000000003 Fun4All   Jim Jones         \n2 1000000004 Fun4All   Denise L. Stephens\n\ndbGetQuery(mydb,\"SELECT c1.cust_id, c1.cust_name, c1.cust_contact\nFROM Customers AS c1, Customers AS c2\nWHERE c1.cust_name = c2.cust_name\nAND c2.cust_contact = 'Jim Jones';\")\n\n     cust_id cust_name       cust_contact\n1 1000000003   Fun4All          Jim Jones\n2 1000000004   Fun4All Denise L. Stephens\n\ntbl(mydb,\"Customers\") %&gt;% \n  select(cust_id,cust_name,cust_contact) -&gt; c1\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_contact == 'Jim Jones') %&gt;% \n  select(cust_name) -&gt; c2\nc1 %&gt;% inner_join(c2)\n\nJoining with `by = join_by(cust_name)`\n\n\n# Source:   SQL [2 x 3]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    cust_name cust_contact      \n  &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;             \n1 1000000003 Fun4All   Jim Jones         \n2 1000000004 Fun4All   Denise L. Stephens\n\n# 13.2.2\ndbGetQuery(mydb,\"SELECT C.*, O.order_num, O.order_date,\nOI.prod_id, OI.quantity, OI.item_price\nFROM Customers AS C, Orders AS O,\nOrderItems AS OI\nWHERE C.cust_id = O.cust_id\nAND OI.order_num = O.order_num\nAND prod_id = 'RGAN01';\")\n\n     cust_id     cust_name        cust_address cust_city cust_state cust_zip\n1 1000000004       Fun4All 829 Riverside Drive   Phoenix         AZ    88888\n2 1000000005 The Toy Store    4545 53rd Street   Chicago         IL    54545\n  cust_country       cust_contact            cust_email order_num order_date\n1          USA Denise L. Stephens dstephens@fun4all.com     20007 2020-01-30\n2          USA         Kim Howard   kim@thetoystore.com     20008 2020-02-03\n  prod_id quantity item_price\n1  RGAN01       50       4.49\n2  RGAN01        5       4.99\n\ntbl(mydb,\"Customers\") -&gt; C\ntbl(mydb,\"Orders\") %&gt;% \n  select(order_num,order_date,cust_id)-&gt; O\ntbl(mydb,\"OrderItems\") %&gt;% \n  filter(prod_id == 'RGAN01') %&gt;% \n  select(prod_id,quantity,item_price,order_num)-&gt; OI\nC %&gt;% inner_join(O) %&gt;% \n  inner_join(OI) %&gt;% \n  collect() %&gt;% \n  print(width = Inf)\n\nJoining with `by = join_by(cust_id)`\nJoining with `by = join_by(order_num)`\n\n\n# A tibble: 2 × 14\n  cust_id    cust_name     cust_address        cust_city cust_state cust_zip\n  &lt;chr&gt;      &lt;chr&gt;         &lt;chr&gt;               &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;   \n1 1000000004 Fun4All       829 Riverside Drive Phoenix   AZ         88888   \n2 1000000005 The Toy Store 4545 53rd Street    Chicago   IL         54545   \n  cust_country cust_contact       cust_email            order_num order_date\n  &lt;chr&gt;        &lt;chr&gt;              &lt;chr&gt;                     &lt;int&gt; &lt;chr&gt;     \n1 USA          Denise L. Stephens dstephens@fun4all.com     20007 2020-01-30\n2 USA          Kim Howard         kim@thetoystore.com       20008 2020-02-03\n  prod_id quantity item_price\n  &lt;chr&gt;      &lt;int&gt;      &lt;dbl&gt;\n1 RGAN01        50       4.49\n2 RGAN01         5       4.99\n\n# 13.2.3\ndbGetQuery(mydb,\"SELECT Customers.cust_id, Orders.order_num\nFROM Customers\nINNER JOIN Orders ON Customers.cust_id = Orders.cust_id;\")\n\n     cust_id order_num\n1 1000000001     20005\n2 1000000003     20006\n3 1000000004     20007\n4 1000000005     20008\n5 1000000001     20009\n\ntbl(mydb,\"Customers\") %&gt;% \n  inner_join(\n    tbl(mydb,\"Orders\"),by = \"cust_id\"\n  ) %&gt;% \n  select(cust_id,order_num) \n\n# Source:   SQL [5 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    order_num\n  &lt;chr&gt;          &lt;int&gt;\n1 1000000001     20005\n2 1000000003     20006\n3 1000000004     20007\n4 1000000005     20008\n5 1000000001     20009\n\ndbGetQuery(mydb,\"SELECT Customers.cust_id, Orders.order_num\nFROM Customers\nLEFT OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id;\")\n\n     cust_id order_num\n1 1000000001     20005\n2 1000000001     20009\n3 1000000002        NA\n4 1000000003     20006\n5 1000000004     20007\n6 1000000005     20008\n7 1000000006        NA\n\ntbl(mydb,\"Customers\") %&gt;% \n  left_join(\n    tbl(mydb,\"Orders\"),by = \"cust_id\"\n  ) %&gt;% \n  select(cust_id,order_num)\n\n# Source:   SQL [7 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    order_num\n  &lt;chr&gt;          &lt;int&gt;\n1 1000000001     20005\n2 1000000001     20009\n3 1000000002        NA\n4 1000000003     20006\n5 1000000004     20007\n6 1000000005     20008\n7 1000000006        NA\n\ndbGetQuery(mydb,\"SELECT Customers.cust_id, Orders.order_num\nFROM Customers\nRIGHT OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id;\")\n\n     cust_id order_num\n1 1000000001     20005\n2 1000000001     20009\n3 1000000003     20006\n4 1000000004     20007\n5 1000000005     20008\n\ntbl(mydb,\"Customers\") %&gt;% \n  right_join(\n    tbl(mydb,\"Orders\"),by = \"cust_id\"\n  ) %&gt;% \n  select(cust_id,order_num)\n\n# Source:   SQL [5 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    order_num\n  &lt;chr&gt;          &lt;int&gt;\n1 1000000001     20005\n2 1000000001     20009\n3 1000000003     20006\n4 1000000004     20007\n5 1000000005     20008\n\ndbGetQuery(mydb,\"SELECT Customers.cust_id, Orders.order_num\nFROM Customers\nFULL OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id;\")\n\n     cust_id order_num\n1 1000000001     20005\n2 1000000001     20009\n3 1000000002        NA\n4 1000000003     20006\n5 1000000004     20007\n6 1000000005     20008\n7 1000000006        NA\n\ntbl(mydb,\"Customers\") %&gt;% \n  full_join(\n    tbl(mydb,\"Orders\"),by = \"cust_id\"\n  ) %&gt;% \n  select(cust_id,order_num)\n\n# Source:   SQL [7 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    order_num\n  &lt;chr&gt;          &lt;int&gt;\n1 1000000001     20005\n2 1000000001     20009\n3 1000000002        NA\n4 1000000003     20006\n5 1000000004     20007\n6 1000000005     20008\n7 1000000006        NA\n\n# 13.3\ndbGetQuery(mydb,\"SELECT Customers.cust_id,\nCOUNT(Orders.order_num) AS num_ord\nFROM Customers\nINNER JOIN Orders ON Customers.cust_id = Orders.cust_id\nGROUP BY Customers.cust_id;\")\n\n     cust_id num_ord\n1 1000000001       2\n2 1000000003       1\n3 1000000004       1\n4 1000000005       1\n\ntbl(mydb,\"Customers\") %&gt;% \n  select(cust_id) %&gt;% \n  inner_join(tbl(mydb,\"Orders\"),by = \"cust_id\") %&gt;% \n  count(cust_id,name = \"num_ord\")\n\n# Source:   SQL [4 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    num_ord\n  &lt;chr&gt;        &lt;int&gt;\n1 1000000001       2\n2 1000000003       1\n3 1000000004       1\n4 1000000005       1\n\ndbGetQuery(mydb,\"SELECT Customers.cust_id,\nCOUNT(Orders.order_num) AS num_ord\nFROM Customers\nLEFT OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id\nGROUP BY Customers.cust_id;\")\n\n     cust_id num_ord\n1 1000000001       2\n2 1000000002       0\n3 1000000003       1\n4 1000000004       1\n5 1000000005       1\n6 1000000006       0\n\ntbl(mydb,\"Customers\") %&gt;% \n  select(cust_id) %&gt;% \n  left_join(tbl(mydb,\"Orders\"),by = \"cust_id\") %&gt;% \n  summarise(num_ord = sum(!is.na(order_num)),.by = cust_id)\n\nWarning: Missing values are always removed in SQL aggregation functions.\nUse `na.rm = TRUE` to silence this warning\nThis warning is displayed once every 8 hours.\n\n\n# Source:   SQL [6 x 2]\n# Database: sqlite 3.46.0 [F:\\Data\\R4SQL\\data\\TYSQL.sqlite]\n  cust_id    num_ord\n  &lt;chr&gt;        &lt;int&gt;\n1 1000000001       2\n2 1000000002       0\n3 1000000003       1\n4 1000000004       1\n5 1000000005       1\n6 1000000006       0",
+    "crumbs": [
+      "<span class='chapter-number'>13</span>  <span class='chapter-title'>必知必会第13课：创建高级联结</span>"
+    ]
+  },
+  {
+    "objectID": "chap13.html#注意",
+    "href": "chap13.html#注意",
+    "title": "13  必知必会第13课：创建高级联结",
+    "section": "13.3 注意",
+    "text": "13.3 注意\nSQLite在3.39.0版本之前不支持右连接（RIGHT JOIN）和全外连接（FULL OUTER JOIN），但从3.39.0版本开始支持这两种连接类型。",
+    "crumbs": [
+      "<span class='chapter-number'>13</span>  <span class='chapter-title'>必知必会第13课：创建高级联结</span>"
+    ]
+  },
+  {
+    "objectID": "chap13.html#练习",
+    "href": "chap13.html#练习",
+    "title": "13  必知必会第13课：创建高级联结",
+    "section": "13.4 练习",
+    "text": "13.4 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>13</span>  <span class='chapter-title'>必知必会第13课：创建高级联结</span>"
+    ]
+  },
+  {
+    "objectID": "chap14.html",
+    "href": "chap14.html",
+    "title": "14  必知必会第14课：组合查询",
+    "section": "",
+    "text": "14.1 数据库的连接\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>14</span>  <span class='chapter-title'>必知必会第14课：组合查询</span>"
+    ]
+  },
+  {
+    "objectID": "chap14.html#基于sql和tidyverse的数据操作",
+    "href": "chap14.html#基于sql和tidyverse的数据操作",
+    "title": "14  必知必会第14课：组合查询",
+    "section": "14.2 基于SQL和tidyverse的数据操作",
+    "text": "14.2 基于SQL和tidyverse的数据操作\n\n# 14.2.1\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_state IN ('IL','IN','MI');\") \n\n      cust_name cust_contact            cust_email\n1  Village Toys   John Smith sales@villagetoys.com\n2       Fun4All    Jim Jones    jjones@fun4all.com\n3 The Toy Store   Kim Howard   kim@thetoystore.com\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_name = 'Fun4All';\") \n\n  cust_name       cust_contact            cust_email\n1   Fun4All          Jim Jones    jjones@fun4all.com\n2   Fun4All Denise L. Stephens dstephens@fun4all.com\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_state IN ('IL','IN','MI')\nUNION\nSELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_name = 'Fun4All';\") \n\n      cust_name       cust_contact            cust_email\n1       Fun4All Denise L. Stephens dstephens@fun4all.com\n2       Fun4All          Jim Jones    jjones@fun4all.com\n3 The Toy Store         Kim Howard   kim@thetoystore.com\n4  Village Toys         John Smith sales@villagetoys.com\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_state %in% c('IL','IN','MI')) %&gt;% \n  select(cust_name, cust_contact, cust_email) %&gt;% \n  union(\n    tbl(mydb,\"Customers\") %&gt;% \n      filter(cust_name == 'Fun4All') %&gt;% \n      select(cust_name, cust_contact, cust_email)\n  )\n\n# Source:   SQL [4 x 3]\n# Database: sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL.sqlite]\n  cust_name     cust_contact       cust_email           \n  &lt;chr&gt;         &lt;chr&gt;              &lt;chr&gt;                \n1 Fun4All       Denise L. Stephens dstephens@fun4all.com\n2 Fun4All       Jim Jones          jjones@fun4all.com   \n3 The Toy Store Kim Howard         kim@thetoystore.com  \n4 Village Toys  John Smith         sales@villagetoys.com\n\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_state IN ('IL','IN','MI') OR cust_name = 'Fun4All';\")\n\n      cust_name       cust_contact            cust_email\n1  Village Toys         John Smith sales@villagetoys.com\n2       Fun4All          Jim Jones    jjones@fun4all.com\n3       Fun4All Denise L. Stephens dstephens@fun4all.com\n4 The Toy Store         Kim Howard   kim@thetoystore.com\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_state %in% c('IL','IN','MI') | cust_name == 'Fun4All') %&gt;% \n  select(cust_name, cust_contact, cust_email)\n\n# Source:   SQL [4 x 3]\n# Database: sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL.sqlite]\n  cust_name     cust_contact       cust_email           \n  &lt;chr&gt;         &lt;chr&gt;              &lt;chr&gt;                \n1 Village Toys  John Smith         sales@villagetoys.com\n2 Fun4All       Jim Jones          jjones@fun4all.com   \n3 Fun4All       Denise L. Stephens dstephens@fun4all.com\n4 The Toy Store Kim Howard         kim@thetoystore.com  \n\n# 14.2.3\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_state IN ('IL','IN','MI')\nUNION ALL\nSELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_name = 'Fun4All';\")\n\n      cust_name       cust_contact            cust_email\n1  Village Toys         John Smith sales@villagetoys.com\n2       Fun4All          Jim Jones    jjones@fun4all.com\n3 The Toy Store         Kim Howard   kim@thetoystore.com\n4       Fun4All          Jim Jones    jjones@fun4all.com\n5       Fun4All Denise L. Stephens dstephens@fun4all.com\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_state %in% c('IL','IN','MI')) %&gt;% \n  select(cust_name, cust_contact, cust_email) %&gt;% \n  union_all(\n    tbl(mydb,\"Customers\") %&gt;% \n      filter(cust_name == 'Fun4All') %&gt;% \n      select(cust_name, cust_contact, cust_email)\n  )\n\n# Source:   SQL [5 x 3]\n# Database: sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL.sqlite]\n  cust_name     cust_contact       cust_email           \n  &lt;chr&gt;         &lt;chr&gt;              &lt;chr&gt;                \n1 Village Toys  John Smith         sales@villagetoys.com\n2 Fun4All       Jim Jones          jjones@fun4all.com   \n3 The Toy Store Kim Howard         kim@thetoystore.com  \n4 Fun4All       Jim Jones          jjones@fun4all.com   \n5 Fun4All       Denise L. Stephens dstephens@fun4all.com\n\n# 14.2.4\ndbGetQuery(mydb,\"SELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_state IN ('IL','IN','MI')\nUNION\nSELECT cust_name, cust_contact, cust_email\nFROM Customers\nWHERE cust_name = 'Fun4All'\nORDER BY cust_name, cust_contact;\")\n\n      cust_name       cust_contact            cust_email\n1       Fun4All Denise L. Stephens dstephens@fun4all.com\n2       Fun4All          Jim Jones    jjones@fun4all.com\n3 The Toy Store         Kim Howard   kim@thetoystore.com\n4  Village Toys         John Smith sales@villagetoys.com\n\ntbl(mydb,\"Customers\") %&gt;% \n  filter(cust_state %in% c('IL','IN','MI')) %&gt;% \n  select(cust_name, cust_contact, cust_email) %&gt;% \n  union(\n    tbl(mydb,\"Customers\") %&gt;% \n      filter(cust_name == 'Fun4All') %&gt;% \n      select(cust_name, cust_contact, cust_email)\n  ) %&gt;% \n  arrange(cust_name, cust_contact)\n\n# Source:     SQL [4 x 3]\n# Database:   sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL.sqlite]\n# Ordered by: cust_name, cust_contact\n  cust_name     cust_contact       cust_email           \n  &lt;chr&gt;         &lt;chr&gt;              &lt;chr&gt;                \n1 Fun4All       Denise L. Stephens dstephens@fun4all.com\n2 Fun4All       Jim Jones          jjones@fun4all.com   \n3 The Toy Store Kim Howard         kim@thetoystore.com  \n4 Village Toys  John Smith         sales@villagetoys.com",
+    "crumbs": [
+      "<span class='chapter-number'>14</span>  <span class='chapter-title'>必知必会第14课：组合查询</span>"
+    ]
+  },
+  {
+    "objectID": "chap14.html#练习",
+    "href": "chap14.html#练习",
+    "title": "14  必知必会第14课：组合查询",
+    "section": "14.3 练习",
+    "text": "14.3 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>14</span>  <span class='chapter-title'>必知必会第14课：组合查询</span>"
+    ]
+  },
+  {
+    "objectID": "chap15.html",
+    "href": "chap15.html",
+    "title": "15  必知必会第15课：插入数据",
+    "section": "",
+    "text": "15.1 数据库的连接\n因为本次实验有可能会对原来的数据库造成改变，因此我们先做一个备份，并在实验中连接备份数据库。由于我们要分别使用SQL和R进行演示，因此我们需要做两个数据库备份。\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite,fs,dbplyr)\nfile_copy(path = \"data/TYSQL.sqlite\",\n          new_path = \"data/TYSQL_copy1.sqlite\",overwrite = T)\nfile_copy(path = \"data/TYSQL.sqlite\",\n          new_path = \"data/TYSQL_copy2.sqlite\",overwrite = T)\nc1= dbConnect(RSQLite::SQLite(), \"data/TYSQL_copy1.sqlite\")\nc2= dbConnect(RSQLite::SQLite(), \"data/TYSQL_copy2.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>15</span>  <span class='chapter-title'>必知必会第15课：插入数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap15.html#基于sql和tidyverse的数据操作",
+    "href": "chap15.html#基于sql和tidyverse的数据操作",
+    "title": "15  必知必会第15课：插入数据",
+    "section": "15.2 基于SQL和tidyverse的数据操作",
+    "text": "15.2 基于SQL和tidyverse的数据操作\n注意要执行插入操作的时候，我们不是对数据库进行查询，因此不再使用dbGetQuery函数，而是使用dbExecute函数。\n\n# 15.1.1\ndbExecute(c1,\"INSERT INTO Customers(cust_id,\ncust_name,\ncust_address,\ncust_city,\ncust_state,\ncust_zip,\ncust_country,\ncust_contact,\ncust_email)\nVALUES(1000000006,\n'Toy Land',\n'123 Any Street',\n'New York',\n'NY',\n'11111',\n'USA',\nNULL,\nNULL);\")\n\n[1] 1\n\nnew_customer &lt;- tibble(\n  cust_id = 1000000006L,\n  cust_name = 'Toy Land',\n  cust_address = '123 Any Street',\n  cust_city = 'New York',\n  cust_state = 'NY',\n  cust_zip = '11111',\n  cust_country = 'USA',\n  cust_contact = NA,\n  cust_email = NA\n)\ntbl(c2,\"Customers\") %&gt;% \n  rows_insert(new_customer,conflict = \"ignore\",copy = T) \n\nMatching, by = \"cust_id\"\n\n\nWarning: Column `cust_id`: mixed type, first seen values of type string,\ncoercing other values of type integer\n\n\n# Source:   SQL [6 x 9]\n# Database: sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL_copy2.sqlite]\n  cust_id    cust_name   cust_address cust_city cust_state cust_zip cust_country\n  &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;        &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;    &lt;chr&gt;       \n1 1000000001 Village To… 200 Maple L… Detroit   MI         44444    USA         \n2 1000000002 Kids Place  333 South L… Columbus  OH         43333    USA         \n3 1000000003 Fun4All     1 Sunny Pla… Muncie    IN         42222    USA         \n4 1000000004 Fun4All     829 Riversi… Phoenix   AZ         88888    USA         \n5 1000000005 The Toy St… 4545 53rd S… Chicago   IL         54545    USA         \n6 1000000006 Toy Land    123 Any Str… New York  NY         11111    USA         \n# ℹ 2 more variables: cust_contact &lt;chr&gt;, cust_email &lt;chr&gt;\n\ntbl(c2,\"Customers\") %&gt;% \n  collect() %&gt;% \n  print(n = Inf)\n\n# A tibble: 5 × 9\n  cust_id    cust_name   cust_address cust_city cust_state cust_zip cust_country\n  &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;        &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;    &lt;chr&gt;       \n1 1000000001 Village To… 200 Maple L… Detroit   MI         44444    USA         \n2 1000000002 Kids Place  333 South L… Columbus  OH         43333    USA         \n3 1000000003 Fun4All     1 Sunny Pla… Muncie    IN         42222    USA         \n4 1000000004 Fun4All     829 Riversi… Phoenix   AZ         88888    USA         \n5 1000000005 The Toy St… 4545 53rd S… Chicago   IL         54545    USA         \n# ℹ 2 more variables: cust_contact &lt;chr&gt;, cust_email &lt;chr&gt;\n\ntbl(c2,\"Customers\") %&gt;% \n  rows_insert(new_customer,conflict = \"ignore\",copy = T,in_place = T) \n\nMatching, by = \"cust_id\"\n\ntbl(c2,\"Customers\") %&gt;% \n  collect() %&gt;% \n  print(n = Inf)\n\n# A tibble: 6 × 9\n  cust_id    cust_name   cust_address cust_city cust_state cust_zip cust_country\n  &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;        &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;    &lt;chr&gt;       \n1 1000000001 Village To… 200 Maple L… Detroit   MI         44444    USA         \n2 1000000002 Kids Place  333 South L… Columbus  OH         43333    USA         \n3 1000000003 Fun4All     1 Sunny Pla… Muncie    IN         42222    USA         \n4 1000000004 Fun4All     829 Riversi… Phoenix   AZ         88888    USA         \n5 1000000005 The Toy St… 4545 53rd S… Chicago   IL         54545    USA         \n6 1000000006 Toy Land    123 Any Str… New York  NY         11111    USA         \n# ℹ 2 more variables: cust_contact &lt;chr&gt;, cust_email &lt;chr&gt;\n\n# 15.1.2\ndbExecute(c1,\"INSERT INTO Customers(cust_id,\n                      cust_name,\n                      cust_address,\n                      cust_city,\n                      cust_state,\n                      cust_zip,\n                      cust_country)\nVALUES(1000000014,\n       'Toy Land',\n       '123 Any Street',\n       'New York',\n       'NY',\n       '11111',\n       'USA');\n\")\n\n[1] 1\n\n# 创建一个数据框\nnew_customer &lt;- tibble(\n  cust_id = 1000000014L,\n  cust_name = 'Toy Land',\n  cust_address = '123 Any Street',\n  cust_city = 'New York',\n  cust_state = 'NY',\n  cust_zip = '11111',\n  cust_country = 'USA'\n)\n# 将数据插入到目标表 Customers\nrows_insert(tbl(c2, \"Customers\"), new_customer,\n            conflict = \"ignore\",\n            in_place = T,copy = T)\n\nMatching, by = \"cust_id\"\n\ntbl(c2,\"Customers\") %&gt;% \n  collect() %&gt;% \n  print(n = Inf)\n\n# A tibble: 7 × 9\n  cust_id    cust_name   cust_address cust_city cust_state cust_zip cust_country\n  &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;        &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;    &lt;chr&gt;       \n1 1000000001 Village To… 200 Maple L… Detroit   MI         44444    USA         \n2 1000000002 Kids Place  333 South L… Columbus  OH         43333    USA         \n3 1000000003 Fun4All     1 Sunny Pla… Muncie    IN         42222    USA         \n4 1000000004 Fun4All     829 Riversi… Phoenix   AZ         88888    USA         \n5 1000000005 The Toy St… 4545 53rd S… Chicago   IL         54545    USA         \n6 1000000006 Toy Land    123 Any Str… New York  NY         11111    USA         \n7 1000000014 Toy Land    123 Any Str… New York  NY         11111    USA         \n# ℹ 2 more variables: cust_contact &lt;chr&gt;, cust_email &lt;chr&gt;\n\n\n下面这个例子的代码无法正确运行，因为数据库中不存在名为“CustNew”的表，因此这里仅仅进行一个展示：\n\n# 15.1.3\ndbExecute(c1,\"INSERT INTO Customers(cust_id,\ncust_contact,\ncust_email,\ncust_name,\ncust_address,\ncust_city,\ncust_state,\ncust_zip,\ncust_country)\nSELECT cust_id,\ncust_contact,\ncust_email,\ncust_name,\ncust_address,\ncust_city,\ncust_state,\ncust_zip,\ncust_country\nFROM CustNew;\")\n\ntbl(c2,\"Customers\") %&gt;% \n  rows_append(tbl(c2,\"CustNew\"),in_place = T)\n\n\n# 15.2\n\ndbExecute(c1,\"CREATE TABLE CustCopy AS SELECT * FROM Customers;\")\n\n[1] 0\n\ndbListTables(c1)\n\n[1] \"CustCopy\"   \"Customers\"  \"OrderItems\" \"Orders\"     \"Products\"  \n[6] \"Vendors\"   \n\ntbl(c1,\"CustCopy\")\n\n# Source:   table&lt;`CustCopy`&gt; [7 x 9]\n# Database: sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL_copy1.sqlite]\n  cust_id    cust_name   cust_address cust_city cust_state cust_zip cust_country\n  &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;        &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;    &lt;chr&gt;       \n1 1000000001 Village To… 200 Maple L… Detroit   MI         44444    USA         \n2 1000000002 Kids Place  333 South L… Columbus  OH         43333    USA         \n3 1000000003 Fun4All     1 Sunny Pla… Muncie    IN         42222    USA         \n4 1000000004 Fun4All     829 Riversi… Phoenix   AZ         88888    USA         \n5 1000000005 The Toy St… 4545 53rd S… Chicago   IL         54545    USA         \n6 1000000006 Toy Land    123 Any Str… New York  NY         11111    USA         \n7 1000000014 Toy Land    123 Any Str… New York  NY         11111    USA         \n# ℹ 2 more variables: cust_contact &lt;chr&gt;, cust_email &lt;chr&gt;\n\n\n在R中有两种方法可以实现相同的操作。一种方法需要先把数据框载入到R环境中（使用collect函数），然后再存入，操作方法如下：\n\ncopy_to(dest = c2,name = \"CustCopy\",df = tbl(c2,\"Customers\") %&gt;% \n          collect(),overwrite = T)\ntbl(c2,\"CustCopy\")\n\n# Source:   table&lt;`CustCopy`&gt; [7 x 9]\n# Database: sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL_copy2.sqlite]\n  cust_id    cust_name   cust_address cust_city cust_state cust_zip cust_country\n  &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;        &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;    &lt;chr&gt;       \n1 1000000001 Village To… 200 Maple L… Detroit   MI         44444    USA         \n2 1000000002 Kids Place  333 South L… Columbus  OH         43333    USA         \n3 1000000003 Fun4All     1 Sunny Pla… Muncie    IN         42222    USA         \n4 1000000004 Fun4All     829 Riversi… Phoenix   AZ         88888    USA         \n5 1000000005 The Toy St… 4545 53rd S… Chicago   IL         54545    USA         \n6 1000000006 Toy Land    123 Any Str… New York  NY         11111    USA         \n7 1000000014 Toy Land    123 Any Str… New York  NY         11111    USA         \n# ℹ 2 more variables: cust_contact &lt;chr&gt;, cust_email &lt;chr&gt;\n\n# 先删掉创建的表\ndbRemoveTable(c2,\"CustCopy\")\n\n另一种方法是直接把查询保存到数据库的一个表中，实现方法如下：\n\ntbl(c2, \"Customers\") %&gt;%\n  sql_render()  %&gt;% \n  db_save_query(con = c2,sql = .,name = \"CustCopy\",temporary = F)\n\n&lt;table_path&gt; `CustCopy`\n\ndbListTables(c2)\n\n [1] \"CustCopy\"          \"Customers\"         \"OrderItems\"       \n [4] \"Orders\"            \"Products\"          \"Vendors\"          \n [7] \"dbplyr_R8DnPKCOk4\" \"dbplyr_dfK1Y1axzY\" \"dbplyr_vRpiFA51eq\"\n[10] \"sqlite_stat1\"      \"sqlite_stat4\"     \n\ntbl(c2,\"CustCopy\")\n\n# Source:   table&lt;`CustCopy`&gt; [7 x 9]\n# Database: sqlite 3.46.0 [D:\\数据库技术及应用\\R4SQL\\data\\TYSQL_copy2.sqlite]\n  cust_id    cust_name   cust_address cust_city cust_state cust_zip cust_country\n  &lt;chr&gt;      &lt;chr&gt;       &lt;chr&gt;        &lt;chr&gt;     &lt;chr&gt;      &lt;chr&gt;    &lt;chr&gt;       \n1 1000000001 Village To… 200 Maple L… Detroit   MI         44444    USA         \n2 1000000002 Kids Place  333 South L… Columbus  OH         43333    USA         \n3 1000000003 Fun4All     1 Sunny Pla… Muncie    IN         42222    USA         \n4 1000000004 Fun4All     829 Riversi… Phoenix   AZ         88888    USA         \n5 1000000005 The Toy St… 4545 53rd S… Chicago   IL         54545    USA         \n6 1000000006 Toy Land    123 Any Str… New York  NY         11111    USA         \n7 1000000014 Toy Land    123 Any Str… New York  NY         11111    USA         \n# ℹ 2 more variables: cust_contact &lt;chr&gt;, cust_email &lt;chr&gt;",
+    "crumbs": [
+      "<span class='chapter-number'>15</span>  <span class='chapter-title'>必知必会第15课：插入数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap15.html#练习",
+    "href": "chap15.html#练习",
+    "title": "15  必知必会第15课：插入数据",
+    "section": "15.3 练习",
+    "text": "15.3 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>15</span>  <span class='chapter-title'>必知必会第15课：插入数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap15.html#关闭数据库",
+    "href": "chap15.html#关闭数据库",
+    "title": "15  必知必会第15课：插入数据",
+    "section": "15.4 关闭数据库",
+    "text": "15.4 关闭数据库\n这一步，我们会关闭数据库连接。\n\ndbDisconnect(c1)\ndbDisconnect(c2)",
+    "crumbs": [
+      "<span class='chapter-number'>15</span>  <span class='chapter-title'>必知必会第15课：插入数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap16.html",
+    "href": "chap16.html",
+    "title": "16  必知必会第16课：更新和删除数据",
+    "section": "",
+    "text": "16.1 数据库的连接\n本次实验会沿用之前保存的文件，因此直接对之前的副本进行连接。\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite,fs,dbplyr)\nc1= dbConnect(RSQLite::SQLite(), \"data/TYSQL_copy1.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>16</span>  <span class='chapter-title'>必知必会第16课：更新和删除数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap16.html#基于sql和tidyverse的数据操作",
+    "href": "chap16.html#基于sql和tidyverse的数据操作",
+    "title": "16  必知必会第16课：更新和删除数据",
+    "section": "16.2 基于SQL和tidyverse的数据操作",
+    "text": "16.2 基于SQL和tidyverse的数据操作\n\n# 16.1\ndbExecute(c1,\"UPDATE Customers\nSET cust_email = 'kim@thetoystore.com'\nWHERE cust_id = 1000000005;\") \n\n[1] 1\n\ndbExecute(c1,\"UPDATE Customers\nSET cust_contact = 'Sam Roberts',\ncust_email = 'sam@toyland.com'\nWHERE cust_id = 1000000006;\")\n\n[1] 1\n\ndbExecute(c1,\"UPDATE Customers\nSET cust_email = NULL\nWHERE cust_id = 1000000005;\")\n\n[1] 1\n\n# 16.2\n\ndbExecute(c1,\"DELETE FROM Customers\nWHERE cust_id = 1000000006;\")\n\n[1] 1\n\n\n注意，函数返回值表示受到这一步操作影响的行数量。",
+    "crumbs": [
+      "<span class='chapter-number'>16</span>  <span class='chapter-title'>必知必会第16课：更新和删除数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap16.html#练习",
+    "href": "chap16.html#练习",
+    "title": "16  必知必会第16课：更新和删除数据",
+    "section": "16.3 练习",
+    "text": "16.3 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>16</span>  <span class='chapter-title'>必知必会第16课：更新和删除数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap16.html#关闭数据库",
+    "href": "chap16.html#关闭数据库",
+    "title": "16  必知必会第16课：更新和删除数据",
+    "section": "16.4 关闭数据库",
+    "text": "16.4 关闭数据库\n这一步，我们会关闭数据库连接。\n\ndbDisconnect(c1)",
+    "crumbs": [
+      "<span class='chapter-number'>16</span>  <span class='chapter-title'>必知必会第16课：更新和删除数据</span>"
+    ]
+  },
+  {
+    "objectID": "chap17.html",
+    "href": "chap17.html",
+    "title": "17  必知必会第17课：创建和操纵表",
+    "section": "",
+    "text": "17.1 数据库的连接\n本次实验创建一个临时数据库进行连接。\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite,fs,dbplyr)\nc1= dbConnect(RSQLite::SQLite(), \"\")",
+    "crumbs": [
+      "<span class='chapter-number'>17</span>  <span class='chapter-title'>必知必会第17课：创建和操纵表</span>"
+    ]
+  },
+  {
+    "objectID": "chap17.html#基于sql和tidyverse的数据操作",
+    "href": "chap17.html#基于sql和tidyverse的数据操作",
+    "title": "17  必知必会第17课：创建和操纵表",
+    "section": "17.2 基于SQL和tidyverse的数据操作",
+    "text": "17.2 基于SQL和tidyverse的数据操作\n\n# 17.1.1 基本创建\ndbExecute(c1,\"CREATE TABLE Products(\nprod_id CHAR(10) NOT NULL,\nvend_id CHAR(10) NOT NULL,\nprod_name CHAR(254) NOT NULL,\nprod_price DECIMAL(8,2) NOT NULL,\nprod_desc VARCHAR(1000) NULL\n);\")\n\n[1] 0\n\n# 17.1.2 NULL的使用\ndbExecute(c1,\"CREATE TABLE Orders(\norder_num INTEGER NOT NULL,\norder_date DATETIME NOT NULL,\ncust_id CHAR(10) NOT NULL\n)\")  \n\n[1] 0\n\ndbExecute(c1,\"CREATE TABLE Vendors(\nvend_id CHAR(10) NOT NULL,\nvend_name CHAR(50) NOT NULL,\nvend_address CHAR(50) ,\nvend_city CHAR(50) ,\nvend_state CHAR(5) ,\nvend_zip CHAR(10) ,\nvend_country CHAR(50)\n)\")  \n\n[1] 0\n\n# 17.1.3 指定默认值\ndbExecute(c1,\"CREATE TABLE OrderItems(\norder_num INTEGER NOT NULL,\norder_item INTEGER NOT NULL,\nprod_id CHAR(10) NOT NULL,\nquantity INTEGER NOT NULL DEFAULT 1,\nitem_price DECIMAL(8,2) NOT NULL\n);\")  \n\n[1] 0\n\n# 17.2 更新表\ndbExecute(c1,\"ALTER TABLE Vendors\nADD vend_phone CHAR(20);\")  \n\n[1] 0\n\ndbExecute(c1,\"ALTER TABLE Vendors\nDROP COLUMN vend_phone;\") \n\n[1] 0\n\n# 17.3 删除表\ndbExecute(c1,\"CREATE TABLE CustCopy(\n          cust_id INTEGER NOT NULL\n);\")\n\n[1] 0\n\ndbExecute(c1,\"DROP TABLE CustCopy;\") \n\n[1] 0\n\n# 17.4 重命名表\ndbListTables(c1)\n\n[1] \"OrderItems\" \"Orders\"     \"Products\"   \"Vendors\"   \n\ndbExecute(c1,\"ALTER TABLE Orders\nRENAME TO Orders2\") \n\n[1] 0\n\ndbListTables(c1)\n\n[1] \"OrderItems\" \"Orders2\"    \"Products\"   \"Vendors\"",
+    "crumbs": [
+      "<span class='chapter-number'>17</span>  <span class='chapter-title'>必知必会第17课：创建和操纵表</span>"
+    ]
+  },
+  {
+    "objectID": "chap17.html#练习",
+    "href": "chap17.html#练习",
+    "title": "17  必知必会第17课：创建和操纵表",
+    "section": "17.3 练习",
+    "text": "17.3 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>17</span>  <span class='chapter-title'>必知必会第17课：创建和操纵表</span>"
+    ]
+  },
+  {
+    "objectID": "chap17.html#关闭数据库",
+    "href": "chap17.html#关闭数据库",
+    "title": "17  必知必会第17课：创建和操纵表",
+    "section": "17.4 关闭数据库",
+    "text": "17.4 关闭数据库\n这一步，我们会关闭数据库连接。\n\n# 关闭数据库\ndbDisconnect(c1)",
+    "crumbs": [
+      "<span class='chapter-number'>17</span>  <span class='chapter-title'>必知必会第17课：创建和操纵表</span>"
+    ]
+  },
+  {
+    "objectID": "chap18.html",
+    "href": "chap18.html",
+    "title": "18  必知必会第18课：使用视图",
+    "section": "",
+    "text": "18.1 数据库的连接\n本次实验创建会对数据库进行拷贝，然后连接拷贝的数据库。\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite,fs,dbplyr)\nfile_copy(path = \"data/TYSQL.sqlite\",\n          new_path = \"data/TYSQL_copy.sqlite\",overwrite = T)\nc1= dbConnect(RSQLite::SQLite(), \"data/TYSQL_copy.sqlite\")",
+    "crumbs": [
+      "<span class='chapter-number'>18</span>  <span class='chapter-title'>必知必会第18课：使用视图</span>"
+    ]
+  },
+  {
+    "objectID": "chap18.html#数据操作代码",
+    "href": "chap18.html#数据操作代码",
+    "title": "18  必知必会第18课：使用视图",
+    "section": "18.2 数据操作代码",
+    "text": "18.2 数据操作代码\n\n# 18.2.1 \ndbExecute(c1,\"CREATE VIEW ProductCustomers AS\nSELECT cust_name, cust_contact, prod_id\nFROM Customers, Orders, OrderItems\nWHERE Customers.cust_id = Orders.cust_id\nAND OrderItems.order_num = Orders.order_num;\") \n\n[1] 0\n\ndbGetQuery(c1,\"SELECT cust_name, cust_contact\nFROM ProductCustomers\nWHERE prod_id = 'RGAN01';\")\n\n      cust_name       cust_contact\n1       Fun4All Denise L. Stephens\n2 The Toy Store         Kim Howard\n\n# 18.2.2 \ndbExecute(c1,\"CREATE VIEW VendorLocations AS\nSELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'\nAS vend_title\nFROM Vendors;\") \n\n[1] 0\n\ndbGetQuery(c1,\"SELECT * FROM VendorLocations;\")\n\n               vend_title\n1        Bears R Us (USA)\n2     Bear Emporium (USA)\n3   Doll House Inc. (USA)\n4      Furball Inc. (USA)\n5 Fun and Games (England)\n6 Jouets et ours (France)\n\n# 18.2.3 \ndbExecute(c1,\"CREATE VIEW CustomerEMailList AS\nSELECT cust_id, cust_name, cust_email\nFROM Customers\nWHERE cust_email IS NOT NULL;\") \n\n[1] 0\n\ndbGetQuery(c1,\"SELECT *\nFROM CustomerEMailList;\")\n\n     cust_id    cust_name            cust_email\n1 1000000001 Village Toys sales@villagetoys.com\n2 1000000003      Fun4All    jjones@fun4all.com\n3 1000000004      Fun4All dstephens@fun4all.com\n\n# 18.2.4 \ndbExecute(c1,\"CREATE VIEW OrderItemsExpanded AS\nSELECT order_num,\nprod_id,\nquantity,\nitem_price,\nquantity*item_price AS expanded_price\nFROM OrderItems\") \n\n[1] 0\n\ndbGetQuery(c1,\"SELECT *\nFROM OrderItemsExpanded\nWHERE order_num = 20008;\")\n\n  order_num prod_id quantity item_price expanded_price\n1     20008  RGAN01        5       4.99          24.95\n2     20008    BR03        5      11.99          59.95\n3     20008  BNBG01       10       3.49          34.90\n4     20008  BNBG02       10       3.49          34.90\n5     20008  BNBG03       10       3.49          34.90",
+    "crumbs": [
+      "<span class='chapter-number'>18</span>  <span class='chapter-title'>必知必会第18课：使用视图</span>"
+    ]
+  },
+  {
+    "objectID": "chap18.html#练习",
+    "href": "chap18.html#练习",
+    "title": "18  必知必会第18课：使用视图",
+    "section": "18.3 练习",
+    "text": "18.3 练习\n\n请使用SQL和R两种方式，解决课后的挑战题。",
+    "crumbs": [
+      "<span class='chapter-number'>18</span>  <span class='chapter-title'>必知必会第18课：使用视图</span>"
+    ]
+  },
+  {
+    "objectID": "chap18.html#关闭数据库",
+    "href": "chap18.html#关闭数据库",
+    "title": "18  必知必会第18课：使用视图",
+    "section": "18.4 关闭数据库",
+    "text": "18.4 关闭数据库\n这一步，我们会关闭数据库连接。\n\n# 关闭数据库\ndbDisconnect(c1)",
+    "crumbs": [
+      "<span class='chapter-number'>18</span>  <span class='chapter-title'>必知必会第18课：使用视图</span>"
+    ]
+  },
+  {
+    "objectID": "chap19.html",
+    "href": "chap19.html",
+    "title": "19  必知必会第19课：使用存储过程",
+    "section": "",
+    "text": "根据第19课“使用存储过程”课程的描述，存储过程的关键在于把一些定制化的处理封装在易用的单元中，使得数据能够更加易于维护和管理。尽管SQLite不支持存储过程，但是基于R语言的SQL实现能够协助我们完成类似的过程，这里我们就以统计具有邮件地址顾客数量为例，进行实现。\n首先对数据库进行连接：\n\nlibrary(pacman)\np_load(tidyverse,DBI,RSQLite)\n\nmydb = dbConnect(RSQLite::SQLite(), \"data/TYSQL.sqlite\")\n\n然后我们创建一个相对应的查询函数：\n\nMailingListCount= function() \"SELECT COUNT(*) AS cnt FROM Customers WHERE cust_email IS NOT NULL\"\n\n那么，我们就可以通过调用查询函数，从而得到结果：\n\ndbGetQuery(mydb,MailingListCount())\n\n  cnt\n1   3\n\n\n需要注意的是，我们这里设置的函数没有参数，直接返回字符串。实际应用中，我们可能会根据需要设置一系列函数，通过字符串操作，我们可以构造不同的查询，从而实现自定义的查询功能（SELECT）或执行其他的操作（创建、更新、删除等）。",
+    "crumbs": [
+      "<span class='chapter-number'>19</span>  <span class='chapter-title'>必知必会第19课：使用存储过程</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html",
+    "href": "chap20.html",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "",
+    "text": "20.1 SQLite中的事务处理\nSQLite支持事务（Transaction）处理，通过事务可以确保一组数据库操作的原子性（Atomicity）、一致性（Consistency）、隔离性（Isolation）和持久性（Durability），即ACID属性。这使得数据库操作能够在多用户环境中更加可靠和安全。",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#事务的基本概念",
+    "href": "chap20.html#事务的基本概念",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.2 事务的基本概念",
+    "text": "20.2 事务的基本概念\n事务是一系列操作的逻辑单元，这些操作要么全部执行成功并提交（Commit），要么全部撤销并回滚（Rollback）。\n\n原子性：事务中的操作要么全部成功，要么全部失败，不能只执行一部分。\n一致性：事务结束后，数据库必须保持一致状态。\n隔离性：多个事务同时执行时，不会互相干扰。\n持久性：事务一旦提交，修改将永久保存，即使系统崩溃也不会丢失。",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#事务的工作流程",
+    "href": "chap20.html#事务的工作流程",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.3 事务的工作流程",
+    "text": "20.3 事务的工作流程\n以下是一个典型事务的执行流程：\n\n开始事务。\n执行一系列SQL操作。\n如果操作成功，提交事务；如果操作失败，回滚事务。",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#sqlite中的事务语法",
+    "href": "chap20.html#sqlite中的事务语法",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.4 SQLite中的事务语法",
+    "text": "20.4 SQLite中的事务语法\nSQLite使用以下语句来控制事务：\n\n开始事务\nBEGIN TRANSACTION;\n-- 或简写为\nBEGIN;\n提交事务\nCOMMIT;\n提交事务后，事务中的所有更改将保存到数据库。\n回滚事务\nROLLBACK;\n回滚事务后，事务中的所有更改将撤销，数据库恢复到事务开始前的状态。\n保留点（SAVEPOINT）\n用于在事务中创建一个保留点，以便在必要时回滚到该保留点。\nSAVEPOINT savepoint_name;\nROLLBACK TO savepoint_name;\nRELEASE SAVEPOINT savepoint_name;",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#sqlite中的事务示例",
+    "href": "chap20.html#sqlite中的事务示例",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.5 SQLite中的事务示例",
+    "text": "20.5 SQLite中的事务示例\n\n20.5.1 示例 1：读写事务\nBEGIN TRANSACTION;\n\nINSERT INTO Customers (cust_id, cust_name) VALUES (1001, 'John Doe');\nINSERT INTO Customers (cust_id, cust_name) VALUES (1002, 'Jane Smith');\n\nCOMMIT;\n\n\n20.5.2 示例 2：事务回滚\nBEGIN TRANSACTION;\n\nINSERT INTO Orders (order_id, order_date) VALUES (101, '2024-12-13');\nINSERT INTO Orders (order_id, order_date) VALUES (102, '2024-12-14');\n\n-- 出现错误，回滚事务\nROLLBACK;\n\n\n20.5.3 示例 3：使用保留点\nBEGIN TRANSACTION;\n\nSAVEPOINT sp1;\nINSERT INTO Products (prod_id, prod_name) VALUES (2001, 'Toy Car');\n\nSAVEPOINT sp2;\nINSERT INTO Products (prod_id, prod_name) VALUES (2002, 'Toy Train');\n\n-- 回滚到保留点 sp1\nROLLBACK TO sp1;\n\n-- 释放保留点\nRELEASE SAVEPOINT sp2;\n\nCOMMIT;",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#事务的特点和注意事项",
+    "href": "chap20.html#事务的特点和注意事项",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.6 事务的特点和注意事项",
+    "text": "20.6 事务的特点和注意事项\n\n自动提交：SQLite默认每条独立的SQL语句都会自动提交事务。如果需要显式管理事务，需要关闭自动提交功能（使用BEGIN）。\n嵌套事务：SQLite不支持真正的嵌套事务，但可以通过保留点（SAVEPOINT）模拟嵌套事务。\n并发控制：SQLite是一个轻量级数据库，不支持高并发写操作。事务在并发环境中可能会出现锁定问题。",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#事务的应用场景",
+    "href": "chap20.html#事务的应用场景",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.7 事务的应用场景",
+    "text": "20.7 事务的应用场景\n\n批量插入或更新：将大量插入操作封装在一个事务中，提高性能并确保原子性。\n错误恢复：在事务中检测到错误时，可以回滚事务，防止错误数据影响数据库。\n数据一致性：确保复杂的多表操作在成功完成所有步骤前不会改变数据库状态。",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#在r中实现事务处理",
+    "href": "chap20.html#在r中实现事务处理",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.8 在R中实现事务处理",
+    "text": "20.8 在R中实现事务处理\n通过DBI和RSQLite包可以在R中管理SQLite的事务：\n\n20.8.1 示例代码：\nlibrary(DBI)\nlibrary(RSQLite)\n\n# 连接到数据库\nconn &lt;- dbConnect(RSQLite::SQLite(), \"data/TYSQL_copy.sqlite\")\n\n# 开始事务\ndbBegin(conn)\n\ntryCatch({\n  # 插入数据\n  dbExecute(conn, \"INSERT INTO Customers (cust_id, cust_name) VALUES (1001, 'John Doe')\")\n  dbExecute(conn, \"INSERT INTO Customers (cust_id, cust_name) VALUES (1002, 'Jane Smith')\")\n  \n  # 提交事务\n  dbCommit(conn)\n}, error = function(e) {\n  # 如果出错，回滚事务\n  dbRollback(conn)\n  print(\"Transaction rolled back due to error\")\n})\n\n# 关闭连接\ndbDisconnect(conn)",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap20.html#总结",
+    "href": "chap20.html#总结",
+    "title": "20  必知必会第20课：管理事务处理",
+    "section": "20.9 总结",
+    "text": "20.9 总结\nSQLite提供了强大的事务处理功能，包括基本的事务操作和高级的保留点机制。事务处理在保证数据一致性、恢复错误和批量操作中起到关键作用。通过合理使用事务，可以提高数据库的可靠性和操作效率。",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>必知必会第20课：管理事务处理</span>"
+    ]
+  },
+  {
+    "objectID": "chap21.html",
+    "href": "chap21.html",
+    "title": "21  必知必会第21课：使用游标",
+    "section": "",
+    "text": "21.1 游标的基本概念\n游标是一个数据库查询操作的指针，用于遍历查询结果集。可以将游标想象成一个遍历数据行的“指针”或者“游走者”，它帮助你从查询结果中逐行读取数据。",
+    "crumbs": [
+      "<span class='chapter-number'>21</span>  <span class='chapter-title'>必知必会第21课：使用游标</span>"
+    ]
+  },
+  {
+    "objectID": "chap21.html#游标的工作流程",
+    "href": "chap21.html#游标的工作流程",
+    "title": "21  必知必会第21课：使用游标",
+    "section": "21.2 游标的工作流程",
+    "text": "21.2 游标的工作流程\n\n创建游标：当你执行一个 SELECT 查询时，SQLite 会创建一个游标对象，它将指向查询结果。\n遍历数据：游标会逐行遍历查询结果集。每次调用游标时，游标会返回一行数据。\n关闭游标：游标完成操作后，应该关闭以释放资源。",
+    "crumbs": [
+      "<span class='chapter-number'>21</span>  <span class='chapter-title'>必知必会第21课：使用游标</span>"
+    ]
+  },
+  {
+    "objectID": "chap21.html#r代码示例",
+    "href": "chap21.html#r代码示例",
+    "title": "21  必知必会第21课：使用游标",
+    "section": "21.3 R代码示例",
+    "text": "21.3 R代码示例\n在 R 中，DBI 和 RSQLite 包提供了对游标的良好支持。通过 dbSendQuery() 创建游标并执行查询，然后使用 dbFetch() 获取数据，最后通过 dbClearResult() 关闭游标。\n假设有一个 Customers 表，其中包含 cust_id 和 cust_name 字段，我们可以使用游标逐行读取数据。\n\nlibrary(DBI)\nlibrary(RSQLite)\n\n# 连接到数据库\nconn &lt;- dbConnect(RSQLite::SQLite(), \"data/TYSQL_copy.sqlite\")\n\n# 执行一个查询并获取游标\nresult &lt;- dbSendQuery(conn, \"SELECT cust_id, cust_name FROM Customers\")\n\n# 使用游标逐行读取数据\nwhile (!dbHasCompleted(result)) {\n  row &lt;- dbFetch(result,n = 1)\n  print(row)  # 逐行处理结果\n}\n\n     cust_id    cust_name\n1 1000000001 Village Toys\n     cust_id  cust_name\n1 1000000002 Kids Place\n     cust_id cust_name\n1 1000000003   Fun4All\n     cust_id cust_name\n1 1000000004   Fun4All\n     cust_id     cust_name\n1 1000000005 The Toy Store\n  cust_id cust_name\n1    1001  John Doe\n  cust_id  cust_name\n1    1002 Jane Smith\n\n# 关闭游标\ndbClearResult(result)\n\n在这个例子中：\n\ndbSendQuery() 用于发送查询并获取游标对象。\ndbHasCompleted() 检查结果是否已经全部被遍历。\ndbFetch() 用来从游标中获取一行数据。每次调用 dbFetch() 会返回查询结果集的下一行。\ndbClearResult() 用于关闭游标。",
+    "crumbs": [
+      "<span class='chapter-number'>21</span>  <span class='chapter-title'>必知必会第21课：使用游标</span>"
+    ]
+  },
+  {
+    "objectID": "chap21.html#游标的优势和应用",
+    "href": "chap21.html#游标的优势和应用",
+    "title": "21  必知必会第21课：使用游标",
+    "section": "21.4 游标的优势和应用",
+    "text": "21.4 游标的优势和应用\n\n逐行读取：游标允许你逐行读取查询结果，这对于处理大型结果集非常有用，避免一次性加载所有数据到内存中。\n数据流式处理：通过游标可以流式处理数据（如按需获取和处理每一行），适用于需要内存优化的场景。\n复杂查询：游标能够处理复杂的查询场景，例如包含大量数据的 JOIN 查询，或者需要多次处理查询结果的情况。",
+    "crumbs": [
+      "<span class='chapter-number'>21</span>  <span class='chapter-title'>必知必会第21课：使用游标</span>"
+    ]
+  },
+  {
+    "objectID": "chap21.html#游标与内存管理",
+    "href": "chap21.html#游标与内存管理",
+    "title": "21  必知必会第21课：使用游标",
+    "section": "21.5 游标与内存管理",
+    "text": "21.5 游标与内存管理\n使用游标时，特别是在查询返回大量数据时，注意以下几点：\n\n内存消耗：虽然游标通过逐行检索数据减少内存消耗，但仍然需要管理好查询结果集，特别是当查询结果非常大时。过多的游标可能导致内存泄漏。\n释放资源：操作完成后，务必使用 dbClearResult() 关闭游标，以释放相关的内存和资源。",
+    "crumbs": [
+      "<span class='chapter-number'>21</span>  <span class='chapter-title'>必知必会第21课：使用游标</span>"
+    ]
+  },
+  {
+    "objectID": "chap21.html#总结",
+    "href": "chap21.html#总结",
+    "title": "21  必知必会第21课：使用游标",
+    "section": "21.6 总结",
+    "text": "21.6 总结\n\n游标 是数据库操作中的一个指针，用于逐行遍历查询结果。\n在 SQLite 中，游标通过 SELECT 查询自动生成，允许你在内存中流式处理查询结果。\n游标适合处理大规模数据集，能提高效率和减少内存消耗。\n在 R 中，DBI 和 RSQLite 包提供了对游标的全面支持，使得逐行获取数据变得非常简单。\n\n通过游标，你可以在执行查询时更加灵活地操作和管理数据库数据，尤其是在面对大数据集时，游标提供了有效的解决方案。",
+    "crumbs": [
+      "<span class='chapter-number'>21</span>  <span class='chapter-title'>必知必会第21课：使用游标</span>"
+    ]
+  },
+  {
+    "objectID": "chap22.html",
+    "href": "chap22.html",
+    "title": "22  必知必会第22课：高级SQL特性",
+    "section": "",
+    "text": "22.1 约束（Constraints）\n约束是用于限制表中数据的规则，确保数据的完整性和一致性。SQLite 支持以下几种常见的约束：",
+    "crumbs": [
+      "<span class='chapter-number'>22</span>  <span class='chapter-title'>必知必会第22课：高级SQL特性</span>"
+    ]
+  },
+  {
+    "objectID": "chap22.html#约束constraints",
+    "href": "chap22.html#约束constraints",
+    "title": "22  必知必会第22课：高级SQL特性",
+    "section": "",
+    "text": "PRIMARY KEY：用于唯一标识表中的每一行。每个表只能有一个主键，主键列中的值必须是唯一的。\nUNIQUE：确保列中的所有值是唯一的，适用于任何列。\nNOT NULL：确保列中的数据不能为空。\nCHECK：用于限制列中的数据范围或满足某些条件。\nFOREIGN KEY：用于确保引用完整性，确保外键列的值在另一个表中是存在的。\n\n\n22.1.1 示例：在 SQLite 中创建带约束的表\nlibrary(RSQLite)\n\n# 连接到临时 SQLite 数据库\nconn &lt;- dbConnect(RSQLite::SQLite(), \"\")\n\n# 创建一个表，并为字段添加约束\ndbExecute(conn, \"\nCREATE TABLE IF NOT EXISTS Customers (\n  cust_id INTEGER PRIMARY KEY,\n  cust_name TEXT NOT NULL,\n  cust_email TEXT UNIQUE,\n  cust_age INTEGER CHECK(cust_age &gt;= 18),\n  cust_country TEXT\n);\")\n\n# 插入数据\ndbExecute(conn, \"INSERT INTO Customers (cust_id, cust_name, cust_email, cust_age, cust_country) \n                 VALUES (1, 'Alice', 'alice@example.com', 25, 'USA');\")\n\n# 尝试插入重复的邮箱（会因为 UNIQUE 约束而失败）\ndbExecute(conn, \"INSERT INTO Customers (cust_id, cust_name, cust_email, cust_age, cust_country) \n                 VALUES (2, 'Bob', 'alice@example.com', 30, 'Canada');\")\n\n# 关闭连接\ndbDisconnect(conn)\n\n\n22.1.2 约束解释：\n\nPRIMARY KEY 确保 cust_id 列是唯一且非空的。\nNOT NULL 确保 cust_name 列不能为空。\nUNIQUE 确保 cust_email 列中的值是唯一的。\nCHECK 确保 cust_age 必须大于或等于 18。",
+    "crumbs": [
+      "<span class='chapter-number'>22</span>  <span class='chapter-title'>必知必会第22课：高级SQL特性</span>"
+    ]
+  },
+  {
+    "objectID": "chap22.html#索引indexes",
+    "href": "chap22.html#索引indexes",
+    "title": "22  必知必会第22课：高级SQL特性",
+    "section": "22.2 索引（Indexes）",
+    "text": "22.2 索引（Indexes）\n索引是提高查询性能的关键特性。它们使得查询过程更加高效，尤其是在处理大型数据集时。SQLite 支持在表的一个或多个列上创建索引，从而加速查询。\n\n22.2.1 示例：在 SQLite 中创建索引\n# 连接到 SQLite 数据库\nconn &lt;- dbConnect(RSQLite::SQLite(), \"\")\n\n# 创建索引\ndbExecute(conn, \"CREATE INDEX IF NOT EXISTS idx_cust_name ON Customers (cust_name);\")\n\n# 执行查询（索引有助于加速此类查询）\nresult &lt;- dbGetQuery(conn, \"SELECT * FROM Customers WHERE cust_name = 'Alice';\")\nprint(result)\n\n# 关闭连接\ndbDisconnect(conn)\n\n\n22.2.2 索引解释：\n\nCREATE INDEX 创建一个索引，可以加速基于 cust_name 列的查询操作。\n在查询 cust_name = 'Alice' 时，索引帮助加速查询过程，特别是在数据量大时。",
+    "crumbs": [
+      "<span class='chapter-number'>22</span>  <span class='chapter-title'>必知必会第22课：高级SQL特性</span>"
+    ]
+  },
+  {
+    "objectID": "chap22.html#触发器triggers",
+    "href": "chap22.html#触发器triggers",
+    "title": "22  必知必会第22课：高级SQL特性",
+    "section": "22.3 触发器（Triggers）",
+    "text": "22.3 触发器（Triggers）\n触发器是自动执行的一段 SQL 代码，它会在插入、更新或删除数据时触发。触发器用于自动执行某些操作，例如数据验证、日志记录或自动更新其他表。\n\n22.3.1 示例：在 SQLite 中创建触发器\n# 连接到 SQLite 数据库\nconn &lt;- dbConnect(RSQLite::SQLite(), \"TYSQL_copy.sqlite\")\n\n# 创建触发器：每次插入新记录时，记录插入的时间\ndbExecute(conn, \"\nCREATE TRIGGER IF NOT EXISTS after_insert_customer\nAFTER INSERT ON Customers\nBEGIN\n  INSERT INTO AuditLog (action, action_time) \n  VALUES ('INSERT', datetime('now'));\nEND;\")\n\n# 创建审计日志表\ndbExecute(conn, \"\nCREATE TABLE IF NOT EXISTS AuditLog (\n  log_id INTEGER PRIMARY KEY,\n  action TEXT,\n  action_time TEXT\n);\")\n\n# 插入数据到 Customers 表，这将触发触发器\ndbExecute(conn, \"INSERT INTO Customers (cust_id, cust_name, cust_email, cust_age, cust_country) \n                 VALUES (3, 'Charlie', 'charlie@example.com', 22, 'USA');\")\n\n# 查询审计日志表，查看触发器的效果\naudit_log &lt;- dbGetQuery(conn, \"SELECT * FROM AuditLog;\")\nprint(audit_log)\n\n# 关闭连接\ndbDisconnect(conn)\n\n\n22.3.2 触发器解释：\n\nAFTER INSERT：此触发器会在向 Customers 表插入新记录后执行。\n触发器会插入一条记录到 AuditLog 表，记录插入操作的时间。",
+    "crumbs": [
+      "<span class='chapter-number'>22</span>  <span class='chapter-title'>必知必会第22课：高级SQL特性</span>"
+    ]
+  },
+  {
+    "objectID": "chap22.html#数据库安全database-security",
+    "href": "chap22.html#数据库安全database-security",
+    "title": "22  必知必会第22课：高级SQL特性",
+    "section": "22.4 数据库安全（Database Security）",
+    "text": "22.4 数据库安全（Database Security）\nSQLite 作为轻量级的数据库，在安全性方面提供了几种方法，虽然它不支持高级的安全机制（如用户权限管理），但它仍然有一些内置的安全功能。\n\n22.4.1 (1) 数据库加密\nSQLite 本身并不直接提供加密功能，但可以使用第三方库，如 SQLCipher，来为 SQLite 数据库提供加密支持。\n\nSQLCipher 是一个基于 SQLite 的加密扩展，可以通过对数据库进行加密来保护数据安全。\n\n\n\n22.4.2 (2) 文件权限\nSQLite 数据库文件通常存储在本地磁盘上，因此文件系统的安全性（如文件权限）是一个关键因素。确保数据库文件只有授权用户可以访问，避免未经授权的访问。\n\n\n22.4.3 (3) 安全的 SQL 编写（防止 SQL 注入）\n虽然 SQLite 本身没有复杂的权限管理系统，但通过在 R 中使用 dbBind() 来防止 SQL 注入攻击，是确保安全的一个重要手段。\n\n\n22.4.4 防止 SQL 注入的安全写法：\n# 连接到 SQLite 数据库\nconn &lt;- dbConnect(RSQLite::SQLite(), \"example.db\")\n\n# 使用 dbBind() 来绑定参数，防止 SQL 注入\nquery &lt;- \"SELECT * FROM Customers WHERE cust_name = ?\"\nstmt &lt;- dbSendQuery(conn, query)\ndbBind(stmt, list(\"Alice\"))\nresult &lt;- dbFetch(stmt)\nprint(result)\n\n# 关闭连接\ndbClearResult(stmt)\ndbDisconnect(conn)\n通过这种方式，我们避免了直接将用户输入直接拼接到 SQL 查询中，从而防止 SQL 注入攻击。",
+    "crumbs": [
+      "<span class='chapter-number'>22</span>  <span class='chapter-title'>必知必会第22课：高级SQL特性</span>"
+    ]
+  },
+  {
+    "objectID": "chap22.html#总结",
+    "href": "chap22.html#总结",
+    "title": "22  必知必会第22课：高级SQL特性",
+    "section": "22.5 总结",
+    "text": "22.5 总结\n结合 R 和 SQLite，您可以利用 SQLite 支持的高级 SQL 特性来增强数据库的功能、性能和安全性。常见的高级特性包括：\n\n约束：用于保证数据的完整性和一致性。\n索引：提高查询性能，特别是在大数据集上。\n触发器：自动执行某些操作（如日志记录、数据校验等）以确保数据库的一致性。\n数据库安全：虽然 SQLite 没有内置的用户权限管理，但通过加密和适当的文件权限管理，可以确保数据的安全。\n\n在 R 中，可以使用 RSQLite 和 DBI 包来与 SQLite 进行交互，通过 SQL 语句实现这些高级特性。同时，通过 R 的编程接口，可以提高代码的安全性和效率。",
+    "crumbs": [
+      "<span class='chapter-number'>22</span>  <span class='chapter-title'>必知必会第22课：高级SQL特性</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html",
+    "href": "Appendix1_GLOB.html",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "",
+    "text": "A.1 GLOB 子句的基本语法\nGLOB 用法通常是在 WHERE 子句中对字段进行模式匹配，语法格式如下：",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html#glob-子句的基本语法",
+    "href": "Appendix1_GLOB.html#glob-子句的基本语法",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "",
+    "text": "SELECT column1, column2, ...\nFROM table_name\nWHERE column_name GLOB 'pattern';",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html#glob-与-like-的区别",
+    "href": "Appendix1_GLOB.html#glob-与-like-的区别",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "A.2 GLOB 与 LIKE 的区别",
+    "text": "A.2 GLOB 与 LIKE 的区别\n\nLIKE 使用 SQL 的标准通配符，如 %（匹配任意字符）和 _（匹配一个字符）。\nGLOB 使用 UNIX 文件系统的模式匹配规则，使用的通配符有：\n\n*：匹配任意字符（包括空字符）。\n?：匹配单个字符。\n[]：匹配指定范围或集合中的字符。\n[^]：匹配不在指定范围或集合中的字符。\n\n\n注意： GLOB 默认区分大小写，而 LIKE 默认是不区分大小写（具体行为可能依赖于数据库的配置或本地化设置）。但是，你可以通过使用 LIKE 的 COLLATE NOCASE 来使其大小写不敏感。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html#glob-子句中的通配符",
+    "href": "Appendix1_GLOB.html#glob-子句中的通配符",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "A.3 GLOB 子句中的通配符",
+    "text": "A.3 GLOB 子句中的通配符\n\nA.3.1 *（星号）\n* 匹配零个或多个字符。\n示例：\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish*';\n这将匹配所有以 “Fish” 开头的产品名，无论其后面跟着多少个字符。\n\n\nA.3.2 ?（问号）\n? 匹配任意单个字符。\n示例：\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish?';\n这将匹配所有 “Fish” 后面紧跟一个字符的产品名，如 “Fisha”, “Fish1” 等。\n\n\nA.3.3 []（方括号）\n[] 用来匹配方括号内指定字符集合中的任意单个字符。你可以使用范围表达式来指定字符范围。\n示例：\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish[123]';\n这将匹配所有以 “Fish” 开头，且接着是数字 1、2 或 3 的产品名，如 “Fish1”, “Fish2”, “Fish3”。\n示例：\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish[1-3]';\n这将匹配所有以 “Fish” 开头，接着是 1 到 3 之间的数字的产品名，如 “Fish1”, “Fish2”, “Fish3”。\n\n\nA.3.4 [^]（否定字符集）\n[^] 用于指定字符集外的字符。例如，[^abc] 会匹配不是 ‘a’、‘b’ 或 ‘c’ 的任何字符。\n示例：\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish[^0-9]';\n这将匹配所有以 “Fish” 开头，且后面不是数字的产品名。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html#glob-和-like-的差异",
+    "href": "Appendix1_GLOB.html#glob-和-like-的差异",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "A.4 GLOB 和 LIKE 的差异",
+    "text": "A.4 GLOB 和 LIKE 的差异\n\n\n\n\n\n\n\n\n特性\nLIKE\nGLOB\n\n\n\n\n匹配规则\nSQL 标准通配符（% 和 _）\nUNIX 文件系统模式匹配（*, ?, []）\n\n\n区分大小写\n根据数据库配置（通常不区分大小写）\n默认区分大小写\n\n\n使用场景\n模糊匹配（通常用于查询文本内容）\n文件名或路径匹配，尤其是类似文件名的模式",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html#示例使用-glob-进行查询",
+    "href": "Appendix1_GLOB.html#示例使用-glob-进行查询",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "A.5 示例：使用 GLOB 进行查询",
+    "text": "A.5 示例：使用 GLOB 进行查询\n\nA.5.1 示例 1：匹配以 “Fish” 开头的所有产品\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish*';\n这将返回所有以 “Fish” 开头的产品名，例如 “Fish”, “Fishing”, “Fish123” 等。\n\n\nA.5.2 示例 2：匹配以 “Fish” 后面跟一个字符的产品名\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish?';\n这将返回所有类似 “Fisha”, “Fish1” 的产品名。\n\n\nA.5.3 示例 3：匹配以 “Fish” 开头并接着是数字的产品名\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish[0-9]';\n这将返回所有以 “Fish” 开头并紧跟着一个数字的产品名，如 “Fish1”, “Fish9” 等。\n\n\nA.5.4 示例 4：匹配以 “Fish” 开头，并且不以数字结尾的产品名\nSELECT prod_name\nFROM Products\nWHERE prod_name GLOB 'Fish[^0-9]';\n这将返回所有以 “Fish” 开头，并且后面不接数字的产品名，如 “Fishing”, “Fishy” 等。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html#性能注意事项",
+    "href": "Appendix1_GLOB.html#性能注意事项",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "A.6 性能注意事项",
+    "text": "A.6 性能注意事项\n\nGLOB 和 LIKE 都属于字符串匹配操作，通常会影响查询性能，尤其是在大型数据库中。尽量避免在大量数据列上使用模式匹配，特别是当使用通配符 * 时。\nGLOB 是大小写敏感的，这有时可以带来更精确的匹配结果。如果需要进行不区分大小写的匹配，建议使用 LIKE 或者在 GLOB 中手动处理大小写。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix1_GLOB.html#总结",
+    "href": "Appendix1_GLOB.html#总结",
+    "title": "附录 A: SQLite中GLOB的用法",
+    "section": "A.7 总结",
+    "text": "A.7 总结\n\nGLOB 是 SQLite 中用于模式匹配的子句，使用与 UNIX 文件系统相同的通配符规则（如 *、?、[]）。\n它与 LIKE 子句的主要区别在于匹配规则、大小写敏感性以及适用场景。\n适用于需要执行文件名或路径风格的模式匹配时，但如果需要进行更灵活的模糊匹配，LIKE 通常更合适。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>SQLite中GLOB的用法</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix2_SQL_injection.html",
+    "href": "Appendix2_SQL_injection.html",
+    "title": "附录 B: SQL注入简介",
+    "section": "",
+    "text": "B.1 SQL 注入的工作原理\nSQL 注入的基本原理是：攻击者将恶意的 SQL 代码嵌入到应用程序的输入字段（例如表单输入、查询字符串、URL 参数等）中，这些输入会直接用于构建 SQL 查询。当应用程序执行这些查询时，恶意代码被执行，从而达成攻击者的目的。\n例如，假设有一个网站允许用户通过用户名和密码登录，且其后台的 SQL 查询如下：\n如果用户输入的内容直接被拼接到 SQL 查询中，而没有经过适当的验证或清理，攻击者可以提交恶意的输入，比如：\n这样，生成的 SQL 查询会变成：\n在这个查询中，'1'='1' 永远为真，这样 SQL 查询就会成功执行，即使密码输入错误也能以管理员身份登录系统。这就是 SQL 注入攻击的一个简单示例。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>SQL注入简介</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix2_SQL_injection.html#sql-注入的工作原理",
+    "href": "Appendix2_SQL_injection.html#sql-注入的工作原理",
+    "title": "附录 B: SQL注入简介",
+    "section": "",
+    "text": "SELECT * FROM users WHERE username = 'user_input' AND password = 'user_input';\n\n\n用户名: admin' AND '1'='1' OR '1'='1\n密码: anything\n\n\nSELECT * FROM users WHERE username = 'admin' AND '1'='1' OR '1'='1' AND password = 'anything';",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>SQL注入简介</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix2_SQL_injection.html#sql-注入攻击的危害",
+    "href": "Appendix2_SQL_injection.html#sql-注入攻击的危害",
+    "title": "附录 B: SQL注入简介",
+    "section": "B.2 SQL 注入攻击的危害",
+    "text": "B.2 SQL 注入攻击的危害\nSQL 注入攻击可能导致以下几种危害：\n\n绕过身份验证：攻击者可以通过注入特定的 SQL 代码，绕过登录认证，获得管理员权限或其他用户权限。\n数据泄露：攻击者可以获取数据库中的敏感信息，例如用户的个人数据、密码、信用卡号等。\n数据篡改：攻击者可以插入、更新或删除数据库中的数据，导致数据丢失或被篡改。\n执行系统命令：在某些情况下，攻击者可以利用 SQL 注入执行系统命令或其他数据库操作，进一步控制数据库服务器。\n删除数据：攻击者可以通过注入恶意的 SQL 查询，删除整个数据库或特定表中的数据，造成不可逆的损失。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>SQL注入简介</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix2_SQL_injection.html#如何防止-sql-注入",
+    "href": "Appendix2_SQL_injection.html#如何防止-sql-注入",
+    "title": "附录 B: SQL注入简介",
+    "section": "B.3 如何防止 SQL 注入",
+    "text": "B.3 如何防止 SQL 注入\n\n使用预编译语句（Prepared Statements）： 预编译语句可以有效防止 SQL 注入，它通过将 SQL 查询与用户输入分开，使得用户输入的数据不会被直接插入到 SQL 查询中。这是防止 SQL 注入的最有效方式。\n在 R 中使用 DBI 和 RSQLite 等数据库连接包时，可以通过 dbBind() 和 dbSendQuery() 来使用预编译语句。\n示例：\n# 使用 dbBind 防止 SQL 注入\nlibrary(DBI)\nconn &lt;- dbConnect(RSQLite::SQLite(), \"example.db\")\n\nquery &lt;- \"SELECT * FROM users WHERE username = ? AND password = ?\"\nstmt &lt;- dbSendQuery(conn, query)\ndbBind(stmt, list(\"admin\", \"password123\"))\nresult &lt;- dbFetch(stmt)\ndbClearResult(stmt)\n\ndbDisconnect(conn)\n在这个例子中，? 是参数占位符，用户的输入通过 dbBind() 绑定到 SQL 查询中，而不是直接拼接在查询语句中，这有效避免了 SQL 注入。\n使用存储过程： 存储过程是预定义的 SQL 代码块，执行时会被数据库服务器编译并存储。因此，存储过程可以防止 SQL 注入，因为用户无法直接修改存储过程的内容。\n输入验证和清理： 对用户输入的数据进行严格验证，确保其符合预期格式，并对特殊字符（如单引号、双引号、分号等）进行转义或过滤。\n限制数据库权限： 只为应用程序分配最小权限，避免赋予数据库用户过高的权限。这样即使攻击者成功利用 SQL 注入攻击，也只能执行有限的操作，降低风险。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>SQL注入简介</span>"
+    ]
+  },
+  {
+    "objectID": "Appendix2_SQL_injection.html#总结",
+    "href": "Appendix2_SQL_injection.html#总结",
+    "title": "附录 B: SQL注入简介",
+    "section": "B.4 总结",
+    "text": "B.4 总结\nSQL 注入是一种通过向 SQL 查询插入恶意代码来执行不当操作的攻击方式，可能会导致数据泄露、数据篡改、权限提升等严重后果。防止 SQL 注入的最佳实践是使用预编译语句、输入验证、存储过程和最小权限策略等方法。在 R 中，可以通过 DBI 和 RSQLite 等包的预编译语句来避免 SQL 注入，确保数据库应用程序的安全性。",
+    "crumbs": [
+      "附录",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>SQL注入简介</span>"
+    ]
+  }
+]
