@@ -1,0 +1,125 @@
+---
+title: "必知必会第4课：过滤数据"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 4.1
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE prod_price = 3.49;") 
+
+# 4.2.1
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE prod_price < 10;") 
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE prod_price <= 10;")
+
+# 4.2.2
+dbGetQuery(mydb,"SELECT vend_id, prod_name
+FROM Products
+WHERE vend_id <> 'DLL01';")
+dbGetQuery(mydb,"SELECT vend_id, prod_name
+FROM Products
+WHERE vend_id != 'DLL01';")
+
+# 4.2.3
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE prod_price BETWEEN 5 AND 10;")
+
+# 4.2.4
+dbGetQuery(mydb,"SELECT prod_name
+FROM Products
+WHERE prod_price IS NULL;")
+dbGetQuery(mydb,"SELECT cust_name
+FROM Customers
+WHERE cust_email IS NULL;")
+```
+
+## 基于tidyverse的数据操作
+
+```{r}
+# 4.1
+tbl(mydb,"Products") %>% 
+  filter(prod_price == 3.49) %>% 
+  select(prod_name, prod_price)
+
+# 4.2.1
+tbl(mydb,"Products") %>% 
+  filter(prod_price < 10) %>% 
+  select(prod_name, prod_price)
+tbl(mydb,"Products") %>% 
+  filter(prod_price <= 10) %>% 
+  select(prod_name, prod_price)
+
+# 4.2.2
+tbl(mydb,"Products") %>% 
+  filter(vend_id != 'DLL01') %>% 
+  select(vend_id, prod_name)
+
+# 4.2.3
+tbl(mydb,"Products") %>% 
+  filter(between(prod_price,5,10)) %>% 
+  select(prod_name, prod_price)
+
+# 4.2.4
+tbl(mydb,"Products") %>% 
+  filter(is.na(prod_price)) %>% 
+  select(prod_name)
+tbl(mydb,"Customers") %>% 
+  filter(is.na(cust_email)) %>% 
+  select(cust_name)
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"Products") %>% 
+  filter(prod_price == 9.49) %>% 
+  select(prod_id,prod_name)
+
+# 2
+tbl(mydb,"Products") %>% 
+  filter(prod_price >= 9) %>% 
+  select(prod_id,prod_name)
+
+# 3
+tbl(mydb,"OrderItems") %>% 
+  filter(quantity >= 100) %>% 
+  distinct(order_num)
+
+# 4
+tbl(mydb,"Products") %>% 
+  filter(between(prod_price,3,6)) %>% 
+  select(prod_name,prod_price) %>% 
+  arrange(prod_price)
+
+```

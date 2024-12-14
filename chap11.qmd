@@ -1,0 +1,147 @@
+---
+title: "必知必会第11课：使用子查询"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 11.2
+dbGetQuery(mydb,"SELECT order_num
+FROM OrderItems
+WHERE prod_id = 'RGAN01';") 
+dbGetQuery(mydb,"SELECT cust_id
+FROM Orders
+WHERE order_num IN (20007,20008);")
+dbGetQuery(mydb,"SELECT cust_id
+FROM Orders
+WHERE order_num IN (SELECT order_num
+FROM OrderItems
+WHERE prod_id = 'RGAN01');")
+dbGetQuery(mydb,"SELECT cust_name, cust_contact
+FROM Customers
+WHERE cust_id IN (1000000004,1000000005);")
+dbGetQuery(mydb,"SELECT cust_name, cust_contact
+FROM Customers
+WHERE cust_id IN (SELECT cust_id
+FROM Orders
+WHERE order_num IN (SELECT order_num
+FROM OrderItems
+WHERE prod_id = 'RGAN01'));")
+
+# 11.3
+dbGetQuery(mydb,"SELECT COUNT(*) AS orders
+FROM Orders
+WHERE cust_id = 1000000001;")
+dbGetQuery(mydb,"SELECT cust_name,
+cust_state,
+(SELECT COUNT(*)
+FROM Orders
+WHERE Orders.cust_id = Customers.cust_id) AS orders
+FROM Customers
+ORDER BY cust_name;")
+dbGetQuery(mydb,"SELECT cust_name,
+cust_state,
+(SELECT COUNT(*)
+FROM Orders
+WHERE cust_id = cust_id) AS orders
+FROM Customers
+ORDER BY cust_name;")
+```
+
+## 基于tidyverse的数据操作
+
+```{r}
+# 11.2
+tbl(mydb,"OrderItems") %>% 
+  filter(prod_id == 'RGAN01') %>% 
+  pull(order_num) -> query1
+tbl(mydb,"Orders") %>% 
+  filter(order_num %in% query1) %>% 
+  pull(cust_id) -> query2
+tbl(mydb,"Customers") %>% 
+  filter(cust_id %in% query2) %>% 
+  select(cust_name, cust_contact) 
+
+# 11.3
+tbl(mydb,"Orders") %>% 
+  count(cust_id,name = "orders") -> query4
+tbl(mydb,"Customers") %>% 
+  select(cust_name,cust_state,cust_id) %>% 
+  left_join(query4) %>% 
+  arrange(cust_name) 
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"OrderItems") %>% 
+  filter(item_price >= 10) %>% 
+  pull(order_num) -> query1
+tbl(mydb,"Orders") %>% 
+  filter(order_num %in% query1) %>% 
+  select(cust_id)
+
+# 2
+tbl(mydb,"OrderItems") %>% 
+  filter(prod_id == 'BR01') %>% 
+  pull(order_num) -> query1
+tbl(mydb,"Orders") %>% 
+  filter(order_num %in% query1) %>% 
+  select(cust_id, order_date) %>% 
+  arrange(order_date)
+
+# 3
+tbl(mydb,"OrderItems") %>% 
+  filter(prod_id == 'BR01') %>% 
+  pull(order_num) -> query1
+tbl(mydb,"Orders") %>% 
+  filter(order_num %in% query1) %>% 
+  pull(cust_id) -> query2
+tbl(mydb,"Customers") %>% 
+  filter(cust_id %in% query2) %>% 
+  select(cust_email)
+
+# 4
+tbl(mydb,"OrderItems") %>% 
+  group_by(order_num) %>% 
+  summarise(total_ordered = sum(item_price*quantity,na.rm = T)) -> query1
+tbl(mydb,"Orders") %>% 
+  select(cust_id,order_num) %>% 
+  inner_join(query1) %>% 
+  select(-order_num) %>% 
+  arrange(desc(total_ordered))
+
+# 5
+tbl(mydb,"OrderItems") %>% 
+  group_by(prod_id) %>% 
+  summarise(quant_sold = sum(quantity,na.rm = T)) -> query1
+tbl(mydb,"Products") %>% 
+  select(prod_name,prod_id) %>% 
+  left_join(query1) %>% 
+  select(-prod_id) 
+
+```

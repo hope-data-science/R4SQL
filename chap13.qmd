@@ -1,0 +1,220 @@
+---
+title: "必知必会第13课：创建高级联结"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL和tidyverse的数据操作
+
+```{r}
+# 13.1
+dbGetQuery(mydb,"SELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'
+AS vend_title
+FROM Vendors
+ORDER BY vend_name;") 
+tbl(mydb,"Vendors") %>% 
+  arrange(vend_name) %>% 
+  transmute(vend_title = str_c(
+    str_trim(vend_name,"right")," (",
+    str_trim(vend_country),")"
+  )) 
+
+dbGetQuery(mydb,"SELECT cust_name, cust_contact
+FROM Customers AS C, Orders AS O, OrderItems AS OI
+WHERE C.cust_id = O.cust_id
+AND OI.order_num = O.order_num
+AND prod_id = 'RGAN01';")
+tbl(mydb,"Customers") -> C
+tbl(mydb,"Orders") -> O
+tbl(mydb,"OrderItems") -> OI
+C %>% inner_join(O,by = "cust_id") %>% 
+  inner_join(OI,by = "order_num") %>% 
+  filter(prod_id == 'RGAN01') %>% 
+  select(cust_name,cust_contact)
+
+# 13.2
+dbGetQuery(mydb,"SELECT cust_id, cust_name, cust_contact
+FROM Customers
+WHERE cust_name = (SELECT cust_name
+FROM Customers
+WHERE cust_contact = 'Jim Jones');")
+tbl(mydb,"Customers") %>% 
+  filter(cust_contact == 'Jim Jones') %>% 
+  pull(cust_name) -> query1
+tbl(mydb,"Customers") %>% 
+  select(cust_id, cust_name, cust_contact) %>% 
+  filter(cust_name == query1)
+
+dbGetQuery(mydb,"SELECT c1.cust_id, c1.cust_name, c1.cust_contact
+FROM Customers AS c1, Customers AS c2
+WHERE c1.cust_name = c2.cust_name
+AND c2.cust_contact = 'Jim Jones';")
+tbl(mydb,"Customers") %>% 
+  select(cust_id,cust_name,cust_contact) -> c1
+tbl(mydb,"Customers") %>% 
+  filter(cust_contact == 'Jim Jones') %>% 
+  select(cust_name) -> c2
+c1 %>% inner_join(c2)
+
+# 13.2.2
+dbGetQuery(mydb,"SELECT C.*, O.order_num, O.order_date,
+OI.prod_id, OI.quantity, OI.item_price
+FROM Customers AS C, Orders AS O,
+OrderItems AS OI
+WHERE C.cust_id = O.cust_id
+AND OI.order_num = O.order_num
+AND prod_id = 'RGAN01';")
+tbl(mydb,"Customers") -> C
+tbl(mydb,"Orders") %>% 
+  select(order_num,order_date,cust_id)-> O
+tbl(mydb,"OrderItems") %>% 
+  filter(prod_id == 'RGAN01') %>% 
+  select(prod_id,quantity,item_price,order_num)-> OI
+C %>% inner_join(O) %>% 
+  inner_join(OI) %>% 
+  collect() %>% 
+  print(width = Inf)
+
+# 13.2.3
+dbGetQuery(mydb,"SELECT Customers.cust_id, Orders.order_num
+FROM Customers
+INNER JOIN Orders ON Customers.cust_id = Orders.cust_id;")
+tbl(mydb,"Customers") %>% 
+  inner_join(
+    tbl(mydb,"Orders"),by = "cust_id"
+  ) %>% 
+  select(cust_id,order_num) 
+
+dbGetQuery(mydb,"SELECT Customers.cust_id, Orders.order_num
+FROM Customers
+LEFT OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id;")
+tbl(mydb,"Customers") %>% 
+  left_join(
+    tbl(mydb,"Orders"),by = "cust_id"
+  ) %>% 
+  select(cust_id,order_num)
+
+dbGetQuery(mydb,"SELECT Customers.cust_id, Orders.order_num
+FROM Customers
+RIGHT OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id;")
+tbl(mydb,"Customers") %>% 
+  right_join(
+    tbl(mydb,"Orders"),by = "cust_id"
+  ) %>% 
+  select(cust_id,order_num)
+
+dbGetQuery(mydb,"SELECT Customers.cust_id, Orders.order_num
+FROM Customers
+FULL OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id;")
+tbl(mydb,"Customers") %>% 
+  full_join(
+    tbl(mydb,"Orders"),by = "cust_id"
+  ) %>% 
+  select(cust_id,order_num)
+
+# 13.3
+dbGetQuery(mydb,"SELECT Customers.cust_id,
+COUNT(Orders.order_num) AS num_ord
+FROM Customers
+INNER JOIN Orders ON Customers.cust_id = Orders.cust_id
+GROUP BY Customers.cust_id;")
+tbl(mydb,"Customers") %>% 
+  select(cust_id) %>% 
+  inner_join(tbl(mydb,"Orders"),by = "cust_id") %>% 
+  count(cust_id,name = "num_ord")
+
+dbGetQuery(mydb,"SELECT Customers.cust_id,
+COUNT(Orders.order_num) AS num_ord
+FROM Customers
+LEFT OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id
+GROUP BY Customers.cust_id;")
+tbl(mydb,"Customers") %>% 
+  select(cust_id) %>% 
+  left_join(tbl(mydb,"Orders"),by = "cust_id") %>% 
+  summarise(num_ord = sum(!is.na(order_num)),.by = cust_id)
+```
+
+## 注意
+
+SQLite在3.39.0版本之前不支持右连接（RIGHT JOIN）和全外连接（FULL OUTER JOIN），但从3.39.0版本开始支持这两种连接类型。
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+# 1
+dbGetQuery(mydb,"SELECT cust_name, order_num
+FROM Customers
+JOIN Orders ON Customers.cust_id = Orders.cust_id
+ORDER BY cust_name;")
+tbl(mydb,"Customers") %>% 
+  inner_join(
+    tbl(mydb,"Orders") 
+  ) %>% 
+  select(cust_name, order_num) %>% 
+  arrange(cust_name)
+
+# 2
+dbGetQuery(mydb,"SELECT cust_name, order_num
+FROM Customers
+LEFT OUTER JOIN Orders ON Customers.cust_id = Orders.cust_id
+ORDER BY cust_name;")
+tbl(mydb,"Customers") %>% 
+  left_join(
+    tbl(mydb,"Orders") 
+  ) %>% 
+  select(cust_name, order_num) %>% 
+  arrange(cust_name)
+
+# 3
+dbGetQuery(mydb,"SELECT prod_name, order_num
+FROM Products LEFT OUTER JOIN OrderItems
+ON Products.prod_id = OrderItems.prod_id
+ORDER BY prod_name;")
+tbl(mydb,"Products") %>% 
+  left_join(tbl(mydb,"OrderItems")) %>% 
+  select(prod_name,order_num) %>% 
+  arrange(prod_name) %>% 
+  collect()
+
+# 4
+dbGetQuery(mydb,"SELECT prod_name, COUNT(order_num) AS orders
+FROM Products LEFT OUTER JOIN OrderItems
+ON Products.prod_id = OrderItems.prod_id
+GROUP BY prod_name
+ORDER BY prod_name;")
+tbl(mydb,"Products") %>% 
+  left_join(tbl(mydb,"OrderItems") %>% 
+              count(prod_id,order_num,name = "orders")) %>% 
+  replace_na(list(orders = 0)) %>% 
+  summarise(orders = sum(orders),.by = prod_name) %>% 
+  arrange(prod_name) 
+
+# 5
+dbGetQuery(mydb,"SELECT Vendors.vend_id, COUNT(prod_id) AS prod_num
+FROM Vendors
+LEFT OUTER JOIN Products ON Vendors.vend_id = Products.vend_id
+GROUP BY Vendors.vend_id;")
+tbl(mydb,"Vendors") %>% 
+  left_join(tbl(mydb,"Products"),by = "vend_id") %>% 
+  summarise(prod_num = sum(!is.na(prod_id)),.by = vend_id)
+
+```

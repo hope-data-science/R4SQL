@@ -1,0 +1,108 @@
+---
+title: "必知必会第18课：使用视图"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+本次实验创建会对数据库进行拷贝，然后连接拷贝的数据库。
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite,fs,dbplyr)
+file_copy(path = "data/TYSQL.sqlite",
+          new_path = "data/TYSQL_copy.sqlite",overwrite = T)
+c1= dbConnect(RSQLite::SQLite(), "data/TYSQL_copy.sqlite")
+```
+
+## 数据操作代码
+
+```{r}
+# 18.2.1 
+dbExecute(c1,"CREATE VIEW ProductCustomers AS
+SELECT cust_name, cust_contact, prod_id
+FROM Customers, Orders, OrderItems
+WHERE Customers.cust_id = Orders.cust_id
+AND OrderItems.order_num = Orders.order_num;") 
+dbGetQuery(c1,"SELECT cust_name, cust_contact
+FROM ProductCustomers
+WHERE prod_id = 'RGAN01';")
+
+# 18.2.2 
+dbExecute(c1,"CREATE VIEW VendorLocations AS
+SELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'
+AS vend_title
+FROM Vendors;") 
+dbGetQuery(c1,"SELECT * FROM VendorLocations;")
+
+# 18.2.3 
+dbExecute(c1,"CREATE VIEW CustomerEMailList AS
+SELECT cust_id, cust_name, cust_email
+FROM Customers
+WHERE cust_email IS NOT NULL;") 
+dbGetQuery(c1,"SELECT *
+FROM CustomerEMailList;")
+
+# 18.2.4 
+dbExecute(c1,"CREATE VIEW OrderItemsExpanded AS
+SELECT order_num,
+prod_id,
+quantity,
+item_price,
+quantity*item_price AS expanded_price
+FROM OrderItems") 
+dbGetQuery(c1,"SELECT *
+FROM OrderItemsExpanded
+WHERE order_num = 20008;")
+
+```
+
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+# 1
+dbExecute(c1,"CREATE VIEW CustomersWithOrders AS
+SELECT Customers.cust_id,
+Customers.cust_name,
+Customers.cust_address,
+Customers.cust_city,
+Customers.cust_state,
+Customers.cust_zip,
+Customers.cust_country,
+Customers.cust_contact,
+Customers.cust_email
+FROM Customers
+JOIN Orders ON Customers.cust_id = Orders.cust_id;")
+dbGetQuery(c1,"SELECT * FROM CustomersWithOrders;")
+
+# 2
+dbExecute(c1,"DROP VIEW OrderItemsExpanded")
+dbListTables(c1)
+dbExecute(c1,"CREATE VIEW OrderItemsExpanded AS
+SELECT order_num,
+prod_id,
+quantity,
+item_price,
+quantity*item_price AS expanded_price
+FROM OrderItems
+ORDER BY order_num;") 
+tbl(c1,"OrderItemsExpanded") %>% 
+  collect()
+
+# 可以使用ORDER BY，没有发生问题
+```
+
+
+## 关闭数据库
+这一步，我们会关闭数据库连接。
+```{r}
+# 关闭数据库
+dbDisconnect(c1)
+```
+

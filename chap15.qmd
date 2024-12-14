@@ -1,0 +1,227 @@
+---
+title: "必知必会第15课：插入数据"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+因为本次实验有可能会对原来的数据库造成改变，因此我们先做一个备份，并在实验中连接备份数据库。由于我们要分别使用SQL和R进行演示，因此我们需要做两个数据库备份。
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite,fs,dbplyr)
+file_copy(path = "data/TYSQL.sqlite",
+          new_path = "data/TYSQL_copy1.sqlite",overwrite = T)
+file_copy(path = "data/TYSQL.sqlite",
+          new_path = "data/TYSQL_copy2.sqlite",overwrite = T)
+c1= dbConnect(RSQLite::SQLite(), "data/TYSQL_copy1.sqlite")
+c2= dbConnect(RSQLite::SQLite(), "data/TYSQL_copy2.sqlite")
+```
+
+## 基于SQL和tidyverse的数据操作
+
+注意要执行插入操作的时候，我们不是对数据库进行查询，因此不再使用`dbGetQuery`函数，而是使用`dbExecute`函数。
+
+```{r}
+# 15.1.1
+dbExecute(c1,"INSERT INTO Customers(cust_id,
+cust_name,
+cust_address,
+cust_city,
+cust_state,
+cust_zip,
+cust_country,
+cust_contact,
+cust_email)
+VALUES(1000000006,
+'Toy Land',
+'123 Any Street',
+'New York',
+'NY',
+'11111',
+'USA',
+NULL,
+NULL);")
+new_customer <- tibble(
+  cust_id = 1000000006L,
+  cust_name = 'Toy Land',
+  cust_address = '123 Any Street',
+  cust_city = 'New York',
+  cust_state = 'NY',
+  cust_zip = '11111',
+  cust_country = 'USA',
+  cust_contact = NA,
+  cust_email = NA
+)
+tbl(c2,"Customers") %>% 
+  rows_insert(new_customer,conflict = "ignore",copy = T) 
+tbl(c2,"Customers") %>% 
+  collect() %>% 
+  print(n = Inf)
+tbl(c2,"Customers") %>% 
+  rows_insert(new_customer,conflict = "ignore",copy = T,in_place = T) 
+tbl(c2,"Customers") %>% 
+  collect() %>% 
+  print(n = Inf)
+
+# 15.1.2
+dbExecute(c1,"INSERT INTO Customers(cust_id,
+                      cust_name,
+                      cust_address,
+                      cust_city,
+                      cust_state,
+                      cust_zip,
+                      cust_country)
+VALUES(1000000014,
+       'Toy Land',
+       '123 Any Street',
+       'New York',
+       'NY',
+       '11111',
+       'USA');
+")
+# 创建一个数据框
+new_customer <- tibble(
+  cust_id = 1000000014L,
+  cust_name = 'Toy Land',
+  cust_address = '123 Any Street',
+  cust_city = 'New York',
+  cust_state = 'NY',
+  cust_zip = '11111',
+  cust_country = 'USA'
+)
+# 将数据插入到目标表 Customers
+rows_insert(tbl(c2, "Customers"), new_customer,
+            conflict = "ignore",
+            in_place = T,copy = T)
+tbl(c2,"Customers") %>% 
+  collect() %>% 
+  print(n = Inf)
+```
+
+下面这个例子的代码无法正确运行，因为数据库中不存在名为“CustNew”的表，因此这里仅仅进行一个展示：
+
+```{r,eval=FALSE}
+# 15.1.3
+dbExecute(c1,"INSERT INTO Customers(cust_id,
+cust_contact,
+cust_email,
+cust_name,
+cust_address,
+cust_city,
+cust_state,
+cust_zip,
+cust_country)
+SELECT cust_id,
+cust_contact,
+cust_email,
+cust_name,
+cust_address,
+cust_city,
+cust_state,
+cust_zip,
+cust_country
+FROM CustNew;")
+
+tbl(c2,"Customers") %>% 
+  rows_append(tbl(c2,"CustNew"),in_place = T)
+```
+
+```{r}
+# 15.2
+
+dbExecute(c1,"CREATE TABLE CustCopy AS SELECT * FROM Customers;")
+dbListTables(c1)
+tbl(c1,"CustCopy")
+```
+
+在R中有两种方法可以实现相同的操作。一种方法需要先把数据框载入到R环境中（使用`collect`函数），然后再存入，操作方法如下：
+
+```{r}
+copy_to(dest = c2,name = "CustCopy",df = tbl(c2,"Customers") %>% 
+          collect(),overwrite = T)
+tbl(c2,"CustCopy")
+
+# 先删掉创建的表
+dbRemoveTable(c2,"CustCopy")
+```
+
+另一种方法是直接把查询保存到数据库的一个表中，实现方法如下：
+
+```{r}
+tbl(c2, "Customers") %>%
+  sql_render()  %>% 
+  db_save_query(con = c2,sql = .,name = "CustCopy",temporary = F)
+dbListTables(c2)
+tbl(c2,"CustCopy")
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+# 1
+dbExecute(c1,"INSERT INTO Customers(cust_id,
+cust_name,
+cust_address,
+cust_city,
+cust_state,
+cust_zip,
+cust_country,
+cust_email)
+VALUES(1000000042,
+'Ben''s Toys',
+'123 Main Street',
+'Oak Park',
+'MI',
+'48237',
+'USA',
+'ben@forta.com');")
+
+new_customer <- tibble(
+  cust_id = 1000000042L,
+  cust_name = "Ben's Toys",
+  cust_address = '123 Main Street',
+  cust_city = 'Oak Park',
+  cust_state = 'MI',
+  cust_zip = '48237',
+  cust_country = 'USA',
+  cust_email = 'ben@forta.com'
+)
+
+rows_insert(tbl(c2, "Customers"), new_customer,
+            conflict = "ignore",
+            in_place = T,copy = T)
+tbl(c2,"Customers") %>% 
+  collect()
+
+# 2
+dbExecute(c1,"CREATE TABLE OrdersBackup AS SELECT * FROM Orders;")
+dbExecute(c1,"CREATE TABLE OrderItemsBackup AS SELECT * FROM OrderItems;")
+dbListTables(c1)
+
+tbl(c2, "Orders") %>%
+  sql_render()  %>% 
+  db_save_query(con = c2,sql = .,name = "OrdersBackup",temporary = F)
+tbl(c2, "OrderItems") %>%
+  sql_render()  %>% 
+  db_save_query(con = c2,sql = .,name = "OrderItemsBackup",temporary = F)
+dbListTables(c2)
+
+```
+
+## 关闭数据库
+
+这一步，我们会关闭数据库连接。
+
+```{r}
+dbDisconnect(c1)
+dbDisconnect(c2)
+
+```

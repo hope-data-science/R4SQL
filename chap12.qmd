@@ -1,0 +1,173 @@
+---
+title: "必知必会第12课：联结表"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL和tidyverse的数据操作
+
+```{r}
+# 12.2
+dbGetQuery(mydb,"SELECT vend_name, prod_name, prod_price
+FROM Vendors, Products
+WHERE Vendors.vend_id = Products.vend_id;") 
+tbl(mydb,"Vendors") %>% 
+  select(vend_name,vend_id) %>% 
+  inner_join(
+    tbl(mydb,"Products") %>% 
+      select(prod_name,prod_price,vend_id)
+  ) %>% 
+  select(-vend_id) 
+
+# 12.2.1
+dbGetQuery(mydb,"SELECT vend_name, prod_name, prod_price
+FROM Vendors, Products;")
+tbl(mydb,"Vendors") %>% 
+  select(vend_name) %>% 
+  cross_join(tbl(mydb,"Products") %>% 
+               select(prod_name,prod_price)) %>% 
+  collect()
+
+# 12.2.2
+dbGetQuery(mydb,"SELECT vend_name, prod_name, prod_price
+FROM Vendors
+INNER JOIN Products ON Vendors.vend_id = Products.vend_id;")
+tbl(mydb,"Vendors") %>% 
+  select(vend_name,vend_id) %>% 
+  inner_join(
+    tbl(mydb,"Products") %>% 
+      select(prod_name,prod_price,vend_id)
+  ) %>% 
+  select(-vend_id) 
+
+# 12.2.3
+dbGetQuery(mydb,"SELECT prod_name, vend_name, prod_price, quantity
+FROM OrderItems, Products, Vendors
+WHERE Products.vend_id = Vendors.vend_id
+AND OrderItems.prod_id = Products.prod_id
+AND order_num = 20007;")
+tbl(mydb,"Products") %>% 
+  select(prod_id,prod_name,prod_price,vend_id) %>% 
+  inner_join(
+    tbl(mydb,"Vendors") %>% 
+      select(vend_id,vend_name)
+  ) %>% 
+  inner_join(
+    tbl(mydb,"OrderItems") %>% 
+      filter(order_num == 20007) %>% 
+      select(prod_id,quantity)
+  ) %>% 
+  transmute(prod_name,vend_name,prod_price,quantity)
+
+dbGetQuery(mydb,"SELECT cust_name, cust_contact
+FROM Customers, Orders, OrderItems
+WHERE Customers.cust_id = Orders.cust_id
+AND OrderItems.order_num = Orders.order_num
+AND prod_id = 'RGAN01';")
+tbl(mydb,"Customers") %>% select(cust_name, cust_contact,cust_id) %>% 
+  inner_join(
+    tbl(mydb,"Orders") %>% select(order_num,cust_id)
+  ) %>% 
+  inner_join(
+    tbl(mydb,"OrderItems") %>% 
+      filter(prod_id == 'RGAN01')%>%
+      select(order_num)
+  ) %>% select(cust_name, cust_contact)
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+# 1
+dbGetQuery(mydb,"SELECT cust_name, order_num
+FROM Customers INNER JOIN Orders
+ON Customers.cust_id = Orders.cust_id
+ORDER BY cust_name, order_num;")
+tbl(mydb,"Customers") %>% select(cust_name,cust_id) %>% 
+  inner_join(
+    tbl(mydb,"Orders") %>% select(order_num,cust_id)
+  ) %>% select(-cust_id) %>% 
+  arrange(cust_name,order_num)
+
+# 2
+dbGetQuery(mydb,"SELECT cust_name,
+order_num,
+(SELECT Sum(item_price*quantity)
+FROM OrderItems
+WHERE Orders.order_num=OrderItems.order_num) AS OrderTotal
+FROM Customers, Orders
+WHERE Customers.cust_id = Orders.cust_id
+ORDER BY cust_name, order_num;")
+tbl(mydb,"Customers") %>% 
+  select(cust_name,cust_id) %>% 
+  inner_join(
+    tbl(mydb,"Orders") %>% 
+      select(order_num,cust_id)
+  ) %>% 
+  inner_join(
+    tbl(mydb,"OrderItems")
+  ) %>% 
+  group_by(cust_name,order_num) %>% 
+  summarise(OrderTotal = sum(item_price*quantity,na.rm = TRUE)) %>% 
+  arrange(cust_name,order_num)
+
+# 3
+dbGetQuery(mydb,"SELECT cust_id, order_date
+FROM Orders, OrderItems
+WHERE Orders.order_num = OrderItems.order_num
+AND prod_id = 'BR01'
+ORDER BY order_date;")
+tbl(mydb,"Orders") %>% 
+  inner_join(tbl(mydb,"OrderItems") %>% 
+               filter(prod_id == 'BR01')) %>% 
+  select(cust_id,order_date) %>% 
+  arrange(order_date)
+
+# 4
+dbGetQuery(mydb,"SELECT cust_email
+FROM Customers
+INNER JOIN Orders ON Customers.cust_id = Orders.cust_id
+INNER JOIN OrderItems ON Orders.order_num = OrderItems.order_num
+WHERE prod_id = 'BR01';")
+tbl(mydb,"Customers") %>% 
+  inner_join(tbl(mydb,"Orders"),by = "cust_id") %>% 
+  inner_join(tbl(mydb,"OrderItems") %>% 
+               filter(prod_id == 'BR01'),by = "order_num") %>% 
+  select(cust_email)
+
+# 5
+dbGetQuery(mydb,"SELECT cust_name, SUM(item_price*quantity) AS total_price
+FROM Customers
+INNER JOIN Orders ON Customers.cust_id = Orders.cust_id
+INNER JOIN OrderItems ON Orders.order_num = OrderItems.order_num
+GROUP BY cust_name
+HAVING SUM(item_price*quantity) >= 1000
+ORDER BY cust_name;")
+tbl(mydb,"Customers") %>% 
+  inner_join(tbl(mydb,"Orders"),by = "cust_id") %>% 
+  inner_join(tbl(mydb,"OrderItems"),by = "order_num") %>% 
+  group_by(cust_name) %>% 
+  summarise(total_price = sum(item_price * quantity,na.rm = TRUE)) %>% 
+  filter(total_price >= 1000) %>% 
+  arrange(cust_name)
+
+```

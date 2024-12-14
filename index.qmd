@@ -1,0 +1,17 @@
+# 前言 {.unnumbered}
+
+本书是浙江财经大学数据科学学院数据科学与大数据技术系黄天元讲师为《数据库技术及应用》课程筹备的课程讲义，旨在综合使用R、SQLite等工具，结合《SQL必知必会》等经典教程，引导学生了解数据库技术的方方面面，并进行实践操作。R语言环境配置如下：
+
+```{r,eval=FALSE}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse,DBI,RSQLite,fs,dbplyr)
+```
+
+SQLite的集成开发环境为[DB Browser for SQLite](https://sqlitebrowser.org/)。
+
+相关参考资料：
+
+-   [在R中使用SQLite](https://cran.r-project.org/web/packages/RSQLite/vignettes/RSQLite.html)
+-   [R数据科学数据库相关章节](https://r4ds.hadley.nz/databases)
+-   [CRAN Task View: Databases with R](https://cran.r-project.org/web/views/Databases.html)
+-   [SQL必知必会（第五版）官方资料](https://forta.com/books/0135182794/)

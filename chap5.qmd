@@ -1,0 +1,141 @@
+---
+title: "必知必会第5课：高级数据过滤"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 5.1.1
+dbGetQuery(mydb,"SELECT prod_id, prod_price, prod_name
+FROM Products
+WHERE vend_id = 'DLL01' AND prod_price <= 4;") 
+
+# 5.1.2
+dbGetQuery(mydb,"SELECT prod_name,prod_price
+FROM Products
+WHERE vend_id = 'DLL01' OR vend_id = 'BRS01';")
+
+# 5.1.3
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE vend_id = 'DLL01' OR vend_id = 'BRS01'
+AND prod_price >= 10;")
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE (vend_id = 'DLL01' OR vend_id = 'BRS01')
+AND prod_price >= 10;")
+
+# 5.2
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE vend_id IN ('DLL01','BRS01')
+ORDER BY prod_name;")
+dbGetQuery(mydb,"SELECT prod_name, prod_price
+FROM Products
+WHERE vend_id = 'DLL01' OR vend_id = 'BRS01'
+ORDER BY prod_name;")
+
+# 5.3
+dbGetQuery(mydb,"SELECT prod_name
+FROM Products
+WHERE NOT vend_id = 'DLL01'
+ORDER BY prod_name;")
+dbGetQuery(mydb,"SELECT prod_name
+FROM Products
+WHERE vend_id <> 'DLL01'
+ORDER BY prod_name;")
+```
+
+## 基于tidyverse的数据操作
+
+```{r}
+# 5.1.1
+tbl(mydb,"Products") %>% 
+  filter(vend_id == 'DLL01' & prod_price <= 4) %>% 
+  select(prod_id, prod_price, prod_name)
+
+# 5.1.2
+tbl(mydb,"Products") %>% 
+  filter(vend_id == 'DLL01' | vend_id == 'BRS01') %>% 
+  select(prod_name,prod_price)
+
+# 5.1.3
+tbl(mydb,"Products") %>% 
+  filter(vend_id == 'DLL01' | vend_id == 'BRS01' & prod_price >= 10) %>% 
+  select(prod_name, prod_price)
+tbl(mydb,"Products") %>% 
+  filter((vend_id == 'DLL01' | vend_id == 'BRS01') & prod_price >= 10) %>% 
+  select(prod_name, prod_price)
+
+# 5.2
+tbl(mydb,"Products") %>% 
+  filter(vend_id %in% c('DLL01','BRS01')) %>% 
+  arrange(prod_name) %>% 
+  select(prod_name,prod_price)
+tbl(mydb,"Products") %>% 
+  filter(vend_id == 'DLL01' | vend_id == 'BRS01') %>% 
+  arrange(prod_name) %>% 
+  select(prod_name,prod_price)
+
+# 5.3
+tbl(mydb,"Products") %>% 
+  filter(!vend_id == 'DLL01') %>% 
+  arrange(prod_name) %>% 
+  select(prod_name)
+tbl(mydb,"Products") %>% 
+  filter(vend_id != 'DLL01') %>% 
+  arrange(prod_name) %>% 
+  select(prod_name)
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"Vendors") %>% 
+  filter(vend_country == 'USA' & vend_state == 'CA') %>% 
+  select(vend_name)
+
+# 2
+## 解法1
+tbl(mydb,"OrderItems") %>% 
+  filter((prod_id=='BR01' | prod_id=='BR02' | prod_id=='BR03') & quantity >=100) %>% 
+  select(order_num, prod_id, quantity)
+## 解法2
+tbl(mydb,"OrderItems") %>% 
+  filter(prod_id %in% c('BR01','BR02','BR03') & quantity >=100) %>% 
+  select(order_num, prod_id, quantity)
+
+# 3
+tbl(mydb,"Products") %>% 
+  filter(prod_price >= 3 & prod_price <= 6) %>% 
+  select(prod_name,prod_price) %>% 
+  arrange(prod_price)
+
+# 4
+## ORDER BY 必须跟在 WHERE 子句之后。
+
+```

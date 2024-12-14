@@ -1,0 +1,72 @@
+---
+title: "必知必会第16课：更新和删除数据"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+本次实验会沿用之前保存的文件，因此直接对之前的副本进行连接。
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite,fs,dbplyr)
+c1= dbConnect(RSQLite::SQLite(), "data/TYSQL_copy1.sqlite")
+```
+
+## 基于SQL和tidyverse的数据操作
+
+```{r}
+# 16.1
+dbExecute(c1,"UPDATE Customers
+SET cust_email = 'kim@thetoystore.com'
+WHERE cust_id = 1000000005;") 
+
+dbExecute(c1,"UPDATE Customers
+SET cust_contact = 'Sam Roberts',
+cust_email = 'sam@toyland.com'
+WHERE cust_id = 1000000006;")
+
+dbExecute(c1,"UPDATE Customers
+SET cust_email = NULL
+WHERE cust_id = 1000000005;")
+
+# 16.2
+
+dbExecute(c1,"DELETE FROM Customers
+WHERE cust_id = 1000000006;")
+```
+
+注意，函数返回值表示受到这一步操作影响的行数量。
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+# 1
+dbExecute(c1,"UPDATE Vendors
+SET vend_state = UPPER(vend_state)
+WHERE vend_country = 'USA';")
+dbExecute(c1,"UPDATE Customers
+SET cust_state = UPPER(cust_state)
+WHERE cust_country = 'USA';")
+
+# 2
+dbGetQuery(c1,"SELECT * FROM Customers
+WHERE cust_id = 1000000042;")
+dbExecute(c1,"DELETE Customers
+WHERE cust_id = 1000000042;")
+```
+
+## 关闭数据库
+
+这一步，我们会关闭数据库连接。
+
+```{r}
+dbDisconnect(c1)
+```

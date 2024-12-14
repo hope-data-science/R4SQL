@@ -1,0 +1,53 @@
+project:
+  type: book
+
+book:
+  title: "基于R的SQL实验讲义"
+  author: "黄天元"
+  date: today
+  date-format: iso
+  language: "zh-cn"
+  chapters:
+    - index.qmd
+    - chap1.qmd
+    - chap2.qmd
+    - chap3.qmd
+    - chap4.qmd
+    - chap5.qmd
+    - chap6.qmd
+    - chap7.qmd
+    - chap8.qmd
+    - chap9.qmd
+    - chap10.qmd
+    - chap11.qmd
+    - chap12.qmd
+    - chap13.qmd
+    - chap14.qmd
+    - chap15.qmd
+    - chap16.qmd
+    - chap17.qmd
+    - chap18.qmd
+    - chap19.qmd
+    - chap20.qmd
+    - chap21.qmd
+    - chap22.qmd
+  appendices:
+    - Appendix1_GLOB.qmd
+    - Appendix2_SQL_injection.qmd
+
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: cosmo
+  pdf:
+    documentclass: scrreprt
+
+editor: visual
+
+crossref:
+  appendix-title: "附录"
+  appendix-delim: ":"
+
+language: _language-zh.yml

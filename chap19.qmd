@@ -1,0 +1,31 @@
+---
+title: "必知必会第19课：使用存储过程"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+根据第19课“使用存储过程”课程的描述，存储过程的关键在于把一些定制化的处理封装在易用的单元中，使得数据能够更加易于维护和管理。尽管SQLite不支持存储过程，但是基于R语言的SQL实现能够协助我们完成类似的过程，这里我们就以统计具有邮件地址顾客数量为例，进行实现。
+
+首先对数据库进行连接：
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+然后我们创建一个相对应的查询函数：
+
+```{r}
+MailingListCount= function() "SELECT COUNT(*) AS cnt FROM Customers WHERE cust_email IS NOT NULL"
+```
+
+那么，我们就可以通过调用查询函数，从而得到结果：
+
+```{r}
+dbGetQuery(mydb,MailingListCount())
+```
+
+需要注意的是，我们这里设置的函数没有参数，直接返回字符串。实际应用中，我们可能会根据需要设置一系列函数，通过字符串操作，我们可以构造不同的查询，从而实现自定义的查询功能（SELECT）或执行其他的操作（创建、更新、删除等）。

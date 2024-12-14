@@ -1,0 +1,107 @@
+---
+title: "必知必会第3课：排序检索数据"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 3.1
+dbGetQuery(mydb,"SELECT prod_name
+FROM Products
+ORDER BY prod_name;") 
+
+# 3.2 
+dbGetQuery(mydb,"SELECT prod_id, prod_price, prod_name
+FROM Products
+ORDER BY prod_price, prod_name;")
+
+# 3.3
+dbGetQuery(mydb,"SELECT prod_id, prod_price, prod_name
+FROM Products
+ORDER BY 2, 3;")
+
+# 3.4
+dbGetQuery(mydb,"SELECT prod_id, prod_price, prod_name
+FROM Products
+ORDER BY prod_price DESC;")
+
+dbGetQuery(mydb,"SELECT prod_id, prod_price, prod_name
+FROM Products
+ORDER BY prod_price DESC, prod_name;")
+
+```
+
+## 基于tidyverse的数据操作
+
+```{r}
+mydb_products = tbl(mydb,"Products")
+
+# 3.1
+mydb_products %>%
+  select(prod_name) %>% 
+  arrange(prod_name)
+
+# 3.2
+mydb_products %>% 
+  select(prod_id, prod_price, prod_name) %>% 
+  arrange(prod_price, prod_name)
+
+# 3.4
+mydb_products %>% 
+  select(prod_id, prod_price, prod_name) %>% 
+  arrange(desc(prod_price)) 
+
+mydb_products %>% 
+  select(prod_id, prod_price, prod_name) %>% 
+  arrange(desc(prod_price),prod_name)
+
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"Customers") %>% 
+  select(cust_name) %>% 
+  arrange(desc(cust_name))
+
+# 2
+tbl(mydb,"Orders") %>% 
+  arrange(cust_id,desc(order_date)) %>% 
+  select(cust_id,order_num) 
+
+# 3
+tbl(mydb,"OrderItems") %>% 
+  select(quantity, item_price) %>% 
+  arrange(desc(quantity),desc(item_price)) %>% 
+  collect()
+
+# 4
+tbl(mydb,"Vendors") %>% 
+  select(vend_name) %>% 
+  arrange(desc(vend_name))
+
+```

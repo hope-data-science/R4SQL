@@ -1,0 +1,162 @@
+
+
+---
+title: "SQLite中GLOB的用法"
+author: "黄天元"
+format: html
+appendix: true
+---
+
+
+
+`GLOB` 是 SQLite 中用于进行模式匹配的一个子句，类似于 SQL 中的 `LIKE` 子句，但它使用的是 **UNIX 文件系统的模式匹配规则**，而不是 SQL 中的标准通配符。它提供了一种基于通配符的方式来匹配字符串。
+
+##  `GLOB` 子句的基本语法
+
+`GLOB` 用法通常是在 `WHERE` 子句中对字段进行模式匹配，语法格式如下：
+
+``` sql
+SELECT column1, column2, ...
+FROM table_name
+WHERE column_name GLOB 'pattern';
+```
+
+##  `GLOB` 与 `LIKE` 的区别
+
+-   **`LIKE`** 使用 SQL 的标准通配符，如 `%`（匹配任意字符）和 `_`（匹配一个字符）。
+-   **`GLOB`** 使用 UNIX 文件系统的模式匹配规则，使用的通配符有：
+    -   `*`：匹配任意字符（包括空字符）。
+    -   `?`：匹配单个字符。
+    -   `[]`：匹配指定范围或集合中的字符。
+    -   `[^]`：匹配不在指定范围或集合中的字符。
+
+**注意：** `GLOB` 默认区分大小写，而 `LIKE` 默认是不区分大小写（具体行为可能依赖于数据库的配置或本地化设置）。但是，你可以通过使用 `LIKE` 的 `COLLATE NOCASE` 来使其大小写不敏感。
+
+##  `GLOB` 子句中的通配符
+
+###  `*`（星号）
+
+`*` 匹配零个或多个字符。
+
+**示例：**
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish*';
+```
+
+这将匹配所有以 "Fish" 开头的产品名，无论其后面跟着多少个字符。
+
+###  `?`（问号）
+
+`?` 匹配任意单个字符。
+
+**示例：**
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish?';
+```
+
+这将匹配所有 "Fish" 后面紧跟一个字符的产品名，如 "Fisha", "Fish1" 等。
+
+###  `[]`（方括号）
+
+`[]` 用来匹配方括号内指定字符集合中的任意单个字符。你可以使用范围表达式来指定字符范围。
+
+**示例：**
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish[123]';
+```
+
+这将匹配所有以 "Fish" 开头，且接着是数字 1、2 或 3 的产品名，如 "Fish1", "Fish2", "Fish3"。
+
+**示例：**
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish[1-3]';
+```
+
+这将匹配所有以 "Fish" 开头，接着是 1 到 3 之间的数字的产品名，如 "Fish1", "Fish2", "Fish3"。
+
+###  `[^]`（否定字符集）
+
+`[^]` 用于指定字符集外的字符。例如，`[^abc]` 会匹配不是 'a'、'b' 或 'c' 的任何字符。
+
+**示例：**
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish[^0-9]';
+```
+
+这将匹配所有以 "Fish" 开头，且后面不是数字的产品名。
+
+##  `GLOB` 和 `LIKE` 的差异
+
+| 特性       | `LIKE`                             | `GLOB`                                   |
+|--------------------|--------------------------|--------------------------|
+| 匹配规则   | SQL 标准通配符（`%` 和 `_`）       | UNIX 文件系统模式匹配（`*`, `?`, `[]`）  |
+| 区分大小写 | 根据数据库配置（通常不区分大小写） | 默认区分大小写                           |
+| 使用场景   | 模糊匹配（通常用于查询文本内容）   | 文件名或路径匹配，尤其是类似文件名的模式 |
+
+##  示例：使用 `GLOB` 进行查询
+
+### 示例 1：匹配以 "Fish" 开头的所有产品
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish*';
+```
+
+这将返回所有以 "Fish" 开头的产品名，例如 "Fish", "Fishing", "Fish123" 等。
+
+### 示例 2：匹配以 "Fish" 后面跟一个字符的产品名
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish?';
+```
+
+这将返回所有类似 "Fisha", "Fish1" 的产品名。
+
+### 示例 3：匹配以 "Fish" 开头并接着是数字的产品名
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish[0-9]';
+```
+
+这将返回所有以 "Fish" 开头并紧跟着一个数字的产品名，如 "Fish1", "Fish9" 等。
+
+### 示例 4：匹配以 "Fish" 开头，并且不以数字结尾的产品名
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish[^0-9]';
+```
+
+这将返回所有以 "Fish" 开头，并且后面不接数字的产品名，如 "Fishing", "Fishy" 等。
+
+##  性能注意事项
+
+-   `GLOB` 和 `LIKE` 都属于字符串匹配操作，通常会影响查询性能，尤其是在大型数据库中。尽量避免在大量数据列上使用模式匹配，特别是当使用通配符 `*` 时。
+-   `GLOB` 是大小写敏感的，这有时可以带来更精确的匹配结果。如果需要进行不区分大小写的匹配，建议使用 `LIKE` 或者在 `GLOB` 中手动处理大小写。
+
+## 总结
+
+-   `GLOB` 是 SQLite 中用于模式匹配的子句，使用与 UNIX 文件系统相同的通配符规则（如 `*`、`?`、`[]`）。
+-   它与 `LIKE` 子句的主要区别在于匹配规则、大小写敏感性以及适用场景。
+-   适用于需要执行文件名或路径风格的模式匹配时，但如果需要进行更灵活的模糊匹配，`LIKE` 通常更合适。

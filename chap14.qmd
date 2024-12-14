@@ -1,0 +1,151 @@
+---
+title: "必知必会第14课：组合查询"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL和tidyverse的数据操作
+
+```{r}
+# 14.2.1
+dbGetQuery(mydb,"SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI');") 
+dbGetQuery(mydb,"SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_name = 'Fun4All';") 
+dbGetQuery(mydb,"SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI')
+UNION
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_name = 'Fun4All';") 
+tbl(mydb,"Customers") %>% 
+  filter(cust_state %in% c('IL','IN','MI')) %>% 
+  select(cust_name, cust_contact, cust_email) %>% 
+  union(
+    tbl(mydb,"Customers") %>% 
+      filter(cust_name == 'Fun4All') %>% 
+      select(cust_name, cust_contact, cust_email)
+  )
+
+dbGetQuery(mydb,"SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI') OR cust_name = 'Fun4All';")
+tbl(mydb,"Customers") %>% 
+  filter(cust_state %in% c('IL','IN','MI') | cust_name == 'Fun4All') %>% 
+  select(cust_name, cust_contact, cust_email)
+
+# 14.2.3
+dbGetQuery(mydb,"SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI')
+UNION ALL
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_name = 'Fun4All';")
+tbl(mydb,"Customers") %>% 
+  filter(cust_state %in% c('IL','IN','MI')) %>% 
+  select(cust_name, cust_contact, cust_email) %>% 
+  union_all(
+    tbl(mydb,"Customers") %>% 
+      filter(cust_name == 'Fun4All') %>% 
+      select(cust_name, cust_contact, cust_email)
+  )
+
+# 14.2.4
+dbGetQuery(mydb,"SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI')
+UNION
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_name = 'Fun4All'
+ORDER BY cust_name, cust_contact;")
+tbl(mydb,"Customers") %>% 
+  filter(cust_state %in% c('IL','IN','MI')) %>% 
+  select(cust_name, cust_contact, cust_email) %>% 
+  union(
+    tbl(mydb,"Customers") %>% 
+      filter(cust_name == 'Fun4All') %>% 
+      select(cust_name, cust_contact, cust_email)
+  ) %>% 
+  arrange(cust_name, cust_contact)
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+# 1
+dbGetQuery(mydb,"SELECT prod_id, quantity 
+FROM OrderItems
+WHERE quantity = 100
+UNION
+SELECT prod_id, quantity 
+FROM OrderItems
+WHERE prod_id LIKE 'BNBG%'
+ORDER BY prod_id;")
+tbl(mydb,"OrderItems") %>% 
+  filter(quantity == 100) %>% 
+  select(prod_id,quantity) %>% 
+  union(
+    tbl(mydb,"OrderItems") %>% 
+      filter(prod_id %like% 'BNBG%') %>% 
+      select(prod_id,quantity) 
+  ) %>% 
+  arrange(prod_id) %>% 
+  collect()
+
+# 2
+dbGetQuery(mydb,"SELECT prod_id, quantity FROM OrderItems
+WHERE quantity = 100 OR prod_id LIKE 'BNBG%'
+ORDER BY prod_id;")
+tbl(mydb,"OrderItems") %>% 
+  filter(quantity == 100 | prod_id %like% 'BNBG%') %>% 
+  select(prod_id,quantity) %>% 
+  arrange(prod_id) %>% 
+  collect()
+
+# 3
+dbGetQuery(mydb,"SELECT prod_name
+FROM Products
+UNION
+SELECT cust_name
+FROM Customers
+ORDER BY prod_name;")
+
+## R控制数据库操作不会允许荒谬的事情发生
+tbl(mydb,"Products") %>% 
+  select(prod_name) %>% 
+  union(tbl(mydb,"Customers") %>% 
+          select(cust_name)) %>% 
+  arrange(prod_name)
+
+# 4
+## 正确写法
+dbGetQuery(mydb,"SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state = 'MI'
+UNION
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state = 'IL'
+ORDER BY cust_name;")
+
+```

@@ -1,0 +1,189 @@
+---
+title: "必知必会第6课：用通配符进行过滤"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 6.1.1
+dbGetQuery(mydb,"SELECT prod_id, prod_name
+FROM Products
+WHERE prod_name LIKE 'Fish%';") 
+dbGetQuery(mydb,"SELECT prod_id, prod_name
+FROM Products
+WHERE prod_name LIKE '%bean bag%';") 
+dbGetQuery(mydb,"SELECT prod_name
+FROM Products
+WHERE prod_name LIKE 'F%y';") 
+
+# 6.1.2
+dbGetQuery(mydb,"SELECT prod_id, prod_name
+FROM Products
+WHERE prod_name LIKE '__ inch teddy bear';")
+dbGetQuery(mydb,"SELECT prod_id, prod_name
+FROM Products
+WHERE prod_name LIKE '% inch teddy bear';")
+
+# 6.1.3
+dbGetQuery(mydb,"SELECT cust_contact
+FROM Customers
+WHERE cust_contact GLOB '[JM]*'
+ORDER BY cust_contact;")
+dbGetQuery(mydb,"SELECT cust_contact
+FROM Customers
+WHERE cust_contact GLOB '[^JM]*'
+ORDER BY cust_contact;")
+
+```
+
+## SQLite GLOB 子句
+
+SQLite 的 GLOB 运算符是用来匹配通配符指定模式的文本值。如果搜索表达式与模式表达式匹配，GLOB 运算符将返回真（true），也就是 1。与 LIKE 运算符不同的是，GLOB 是大小写敏感的，对于下面的通配符，它遵循 UNIX 的语法。
+
+## 基于tidyverse的数据操作
+
+```{r}
+# 6.1.1
+tbl(mydb,"Products") %>% 
+  filter(str_like(prod_name,"Fish%")) %>% 
+  select(prod_id, prod_name)
+tbl(mydb,"Products") %>% 
+  filter(prod_name %LIKE% "Fish%") %>% 
+  select(prod_id, prod_name)
+tbl(mydb,"Products") %>% 
+  filter(prod_name %like% "Fish%") %>% 
+  select(prod_id, prod_name)
+tbl(mydb,"Products") %>% 
+  filter(prod_name %like% "%bean bag%") %>% 
+  select(prod_id, prod_name)
+tbl(mydb,"Products") %>% 
+  filter(prod_name %like% "F%y") %>% 
+  select(prod_name)
+
+# 6.1.2
+tbl(mydb,"Products") %>% 
+  filter(prod_name %like% '__ inch teddy bear') %>% 
+  select(prod_id, prod_name)
+tbl(mydb,"Products") %>% 
+  filter(prod_name %like% '% inch teddy bear') %>% 
+  select(prod_id, prod_name)
+
+# 6.1.3
+tbl(mydb,"Customers") %>% 
+  filter(cust_contact %glob% '[JM]*') %>%  # GLOB
+  arrange(cust_contact) %>% 
+  select(cust_contact)
+tbl(mydb,"Customers") %>% 
+  filter(cust_contact %glob% '[^JM]*') %>% 
+  arrange(cust_contact) %>% 
+  select(cust_contact)
+```
+
+## 注意
+
+在 SQLite 中，`LIKE` 子句 **不支持** `[]` 通配符（字符集匹配）。`LIKE` 的模式匹配规则仅支持两个通配符（`%`和`_`），而`[]` 通配符是 SQLite 中 `GLOB` 子句的专有通配符，用于指定一个字符集范围（或排除某些字符）。而 `LIKE` 仅能处理基于 SQL 标准的通配符，不能像 `GLOB` 那样使用字符集匹配。
+
+### `LIKE` 的通配符
+
+SQLite 中的 `LIKE` 只支持两个标准通配符：
+
+-   `%`：匹配零个或多个字符。
+-   `_`：匹配单个字符。
+
+#### 示例：使用 `LIKE` 子句
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name LIKE 'Fish%';  -- 匹配以 'Fish' 开头的所有产品
+```
+
+这个查询会匹配所有以 "Fish" 开头的产品名，例如 "Fish", "Fishing", "Fish123" 等。
+
+### `GLOB` 的通配符
+
+与 `LIKE` 不同，`GLOB` 允许使用额外的通配符，包括 `[]`，它们符合 Unix 文件系统的匹配规则。例如，`[]` 可以匹配指定字符集中的字符。
+
+#### 示例：使用 `GLOB` 子句
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish[123]';  -- 匹配 'Fish' 后面接 1、2 或 3 的产品名
+```
+
+这个查询会匹配 "Fish1", "Fish2", "Fish3" 等产品名。
+
+### `LIKE` 与 `GLOB` 的比较
+
+| 特性         | `LIKE`                               | `GLOB`                                               |
+|--------------|--------------------------------------|------------------------------------------------------|
+| 支持的通配符 | `%`（任意字符）<br>`_`（单个字符）   | `*`（任意字符）<br>`?`（单个字符）<br>`[]`（字符集） |
+| 区分大小写   | 通常不区分大小写（取决于数据库配置） | 默认区分大小写                                       |
+| 使用场景     | 模糊匹配，适合字符串的部分匹配       | 文件路径匹配或字符集匹配                             |
+
+### 如何使用 `[]` 匹配字符集
+
+如果你想在 SQLite 中使用 `[]` 通配符进行字符集匹配，必须使用 `GLOB` 子句，而不是 `LIKE`。例如：
+
+``` sql
+SELECT prod_name
+FROM Products
+WHERE prod_name GLOB 'Fish[123]';  -- 匹配 'Fish' 后面接 1、2 或 3 的产品名
+```
+
+如果你尝试在 `LIKE` 中使用 `[]`，SQLite 将不会理解这个语法，并且会抛出一个错误或产生不预期的结果。
+
+### 总结
+
+-   **`LIKE`** 子句只能使用 `%` 和 `_` 作为通配符，无法使用 `[]` 匹配字符集。
+-   如果需要使用 `[]` 来匹配字符集或范围，你需要使用 **`GLOB`** 子句。
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"Products") %>% 
+  filter(prod_desc %like% '%toy%') %>% 
+  select(prod_name, prod_desc)
+
+# 2
+tbl(mydb,"Products") %>% 
+  filter(! prod_desc %like% '%toy%') %>% 
+  select(prod_name, prod_desc) %>% 
+  arrange(prod_name)
+
+# 3
+tbl(mydb,"Products") %>% 
+  filter(prod_desc %like% '%toy%' & prod_desc %like% '%carrots%') %>% 
+  select(prod_name, prod_desc) 
+
+# 4
+tbl(mydb,"Products") %>% 
+  filter(prod_desc %like% '%toy%carrots%') %>% 
+  select(prod_name, prod_desc) 
+
+```

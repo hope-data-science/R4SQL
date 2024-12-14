@@ -1,0 +1,138 @@
+---
+title: "必知必会第9课：汇总数据"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 9.1.1
+dbGetQuery(mydb,"SELECT AVG(prod_price) AS avg_price
+FROM Products;") 
+dbGetQuery(mydb,"SELECT AVG(prod_price) AS avg_price
+FROM Products
+WHERE vend_id = 'DLL01';")
+
+# 9.1.2
+dbGetQuery(mydb,"SELECT COUNT(*) AS num_cust
+FROM Customers;")
+dbGetQuery(mydb,"SELECT COUNT(cust_email) AS num_cust
+FROM Customers;")
+
+# 9.1.3
+dbGetQuery(mydb,"SELECT MAX(prod_price) AS max_price
+FROM Products;")
+
+# 9.1.4
+dbGetQuery(mydb,"SELECT MIN(prod_price) AS min_price
+FROM Products;")
+
+# 9.1.5
+dbGetQuery(mydb,"SELECT SUM(quantity) AS items_ordered
+FROM OrderItems
+WHERE order_num = 20005;")
+dbGetQuery(mydb,"SELECT SUM(item_price*quantity) AS total_price
+FROM OrderItems
+WHERE order_num = 20005;")
+
+# 9.2
+dbGetQuery(mydb,"SELECT AVG(DISTINCT prod_price) AS avg_price
+FROM Products
+WHERE vend_id = 'DLL01';")
+
+# 9.3
+dbGetQuery(mydb,"SELECT COUNT(*) AS num_items,
+MIN(prod_price) AS price_min,
+MAX(prod_price) AS price_max,
+AVG(prod_price) AS price_avg
+FROM Products;")
+```
+
+## 基于tidyverse的数据操作
+
+```{r}
+# 9.1.1
+tbl(mydb,"Products") %>% 
+  summarise(avg_price = mean(prod_price,na.rm = TRUE))
+tbl(mydb,"Products") %>% 
+  filter(vend_id == 'DLL01') %>% 
+  summarise(avg_price = mean(prod_price,na.rm = TRUE))
+
+# 9.1.2
+tbl(mydb,"Customers") %>% 
+  tally(name = "num_cust")
+tbl(mydb,"Customers") %>% 
+  filter(!is.na(cust_email)) %>% 
+  tally(name = "num_cust")
+
+# 9.1.3
+tbl(mydb,"Products") %>% 
+  summarise(max_price = max(prod_price))
+
+# 9.1.4
+tbl(mydb,"Products") %>% 
+  summarise(min_price = min(prod_price))
+
+# 9.1.5
+tbl(mydb,"OrderItems") %>% 
+  filter(order_num == 20005) %>% 
+  summarise(items_ordered = sum(quantity))
+tbl(mydb,"OrderItems") %>% 
+  filter(order_num == 20005) %>% 
+  summarise(total_price = sum(item_price * quantity))
+
+# 9.2
+tbl(mydb,"Products") %>% 
+  filter(vend_id == 'DLL01') %>% 
+  summarise(avg_price = mean(distinct(prod_price))) 
+
+# 9.3
+tbl(mydb,"Products") %>% 
+  summarise(
+    num_items = n(),
+    price_min = min(prod_price),
+    price_max = max(prod_price),
+    price_avg = mean(prod_price)
+  )
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"OrderItems") %>% 
+  summarise(items_ordered = sum(quantity))
+
+# 2
+tbl(mydb,"OrderItems") %>% 
+  filter(prod_id == 'BR01') %>% 
+  summarise(items_ordered = sum(quantity))
+
+# 3
+tbl(mydb,"Products") %>% 
+  filter(prod_price <= 10) %>% 
+  summarise(max_price = max(prod_price))
+
+```

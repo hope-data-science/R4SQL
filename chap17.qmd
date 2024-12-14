@@ -1,0 +1,100 @@
+---
+title: "必知必会第17课：创建和操纵表"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+本次实验创建一个临时数据库进行连接。
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite,fs,dbplyr)
+c1= dbConnect(RSQLite::SQLite(), "")
+```
+
+## 基于SQL和tidyverse的数据操作
+
+```{r}
+# 17.1.1 基本创建
+dbExecute(c1,"CREATE TABLE Products(
+prod_id CHAR(10) NOT NULL,
+vend_id CHAR(10) NOT NULL,
+prod_name CHAR(254) NOT NULL,
+prod_price DECIMAL(8,2) NOT NULL,
+prod_desc VARCHAR(1000) NULL
+);")
+
+# 17.1.2 NULL的使用
+dbExecute(c1,"CREATE TABLE Orders(
+order_num INTEGER NOT NULL,
+order_date DATETIME NOT NULL,
+cust_id CHAR(10) NOT NULL
+)")  
+ 
+dbExecute(c1,"CREATE TABLE Vendors(
+vend_id CHAR(10) NOT NULL,
+vend_name CHAR(50) NOT NULL,
+vend_address CHAR(50) ,
+vend_city CHAR(50) ,
+vend_state CHAR(5) ,
+vend_zip CHAR(10) ,
+vend_country CHAR(50)
+)")  
+
+# 17.1.3 指定默认值
+dbExecute(c1,"CREATE TABLE OrderItems(
+order_num INTEGER NOT NULL,
+order_item INTEGER NOT NULL,
+prod_id CHAR(10) NOT NULL,
+quantity INTEGER NOT NULL DEFAULT 1,
+item_price DECIMAL(8,2) NOT NULL
+);")  
+
+# 17.2 更新表
+dbExecute(c1,"ALTER TABLE Vendors
+ADD vend_phone CHAR(20);")  
+dbExecute(c1,"ALTER TABLE Vendors
+DROP COLUMN vend_phone;") 
+
+# 17.3 删除表
+dbExecute(c1,"CREATE TABLE CustCopy(
+          cust_id INTEGER NOT NULL
+);")
+dbExecute(c1,"DROP TABLE CustCopy;") 
+
+# 17.4 重命名表
+dbListTables(c1)
+dbExecute(c1,"ALTER TABLE Orders
+RENAME TO Orders2") 
+dbListTables(c1)
+
+```
+
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+# 1
+dbExecute(c1,"ALTER TABLE Vendors
+ADD vend_web CHAR(100);")
+
+# 2
+dbExecute(c1,"UPDATE Vendors
+SET vend_web = 'https://google.com/'
+WHERE vend_id = 'DLL01';")
+```
+
+
+## 关闭数据库
+这一步，我们会关闭数据库连接。
+```{r}
+# 关闭数据库
+dbDisconnect(c1)
+```
+

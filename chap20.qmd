@@ -1,0 +1,159 @@
+---
+title: "必知必会第20课：管理事务处理"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## SQLite中的事务处理
+
+SQLite支持事务（Transaction）处理，通过事务可以确保一组数据库操作的**原子性（Atomicity）**、**一致性（Consistency）**、**隔离性（Isolation）**和**持久性（Durability）**，即ACID属性。这使得数据库操作能够在多用户环境中更加可靠和安全。
+
+## **事务的基本概念**
+
+事务是一系列操作的逻辑单元，这些操作要么全部执行成功并提交（Commit），要么全部撤销并回滚（Rollback）。
+
+-   **原子性**：事务中的操作要么全部成功，要么全部失败，不能只执行一部分。
+-   **一致性**：事务结束后，数据库必须保持一致状态。
+-   **隔离性**：多个事务同时执行时，不会互相干扰。
+-   **持久性**：事务一旦提交，修改将永久保存，即使系统崩溃也不会丢失。
+
+## **事务的工作流程**
+
+以下是一个典型事务的执行流程：
+
+1.  开始事务。
+2.  执行一系列SQL操作。
+3.  如果操作成功，提交事务；如果操作失败，回滚事务。
+
+## **SQLite中的事务语法**
+
+SQLite使用以下语句来控制事务：
+
+1.  **开始事务**
+
+    ``` sql
+    BEGIN TRANSACTION;
+    -- 或简写为
+    BEGIN;
+    ```
+
+2.  **提交事务**
+
+    ``` sql
+    COMMIT;
+    ```
+
+    提交事务后，事务中的所有更改将保存到数据库。
+
+3.  **回滚事务**
+
+    ``` sql
+    ROLLBACK;
+    ```
+
+    回滚事务后，事务中的所有更改将撤销，数据库恢复到事务开始前的状态。
+
+4.  **保留点（SAVEPOINT）**
+
+    用于在事务中创建一个保留点，以便在必要时回滚到该保留点。
+
+    ``` sql
+    SAVEPOINT savepoint_name;
+    ROLLBACK TO savepoint_name;
+    RELEASE SAVEPOINT savepoint_name;
+    ```
+
+## **SQLite中的事务示例**
+
+### 示例 1：读写事务
+
+``` sql
+BEGIN TRANSACTION;
+
+INSERT INTO Customers (cust_id, cust_name) VALUES (1001, 'John Doe');
+INSERT INTO Customers (cust_id, cust_name) VALUES (1002, 'Jane Smith');
+
+COMMIT;
+```
+
+### 示例 2：事务回滚
+
+``` sql
+BEGIN TRANSACTION;
+
+INSERT INTO Orders (order_id, order_date) VALUES (101, '2024-12-13');
+INSERT INTO Orders (order_id, order_date) VALUES (102, '2024-12-14');
+
+-- 出现错误，回滚事务
+ROLLBACK;
+```
+
+### 示例 3：使用保留点
+
+``` sql
+BEGIN TRANSACTION;
+
+SAVEPOINT sp1;
+INSERT INTO Products (prod_id, prod_name) VALUES (2001, 'Toy Car');
+
+SAVEPOINT sp2;
+INSERT INTO Products (prod_id, prod_name) VALUES (2002, 'Toy Train');
+
+-- 回滚到保留点 sp1
+ROLLBACK TO sp1;
+
+-- 释放保留点
+RELEASE SAVEPOINT sp2;
+
+COMMIT;
+```
+
+## **事务的特点和注意事项**
+
+1.  **自动提交**：SQLite默认每条独立的SQL语句都会自动提交事务。如果需要显式管理事务，需要关闭自动提交功能（使用`BEGIN`）。
+2.  **嵌套事务**：SQLite不支持真正的嵌套事务，但可以通过保留点（SAVEPOINT）模拟嵌套事务。
+3.  **并发控制**：SQLite是一个轻量级数据库，不支持高并发写操作。事务在并发环境中可能会出现锁定问题。
+
+## **事务的应用场景**
+
+-   **批量插入或更新**：将大量插入操作封装在一个事务中，提高性能并确保原子性。
+-   **错误恢复**：在事务中检测到错误时，可以回滚事务，防止错误数据影响数据库。
+-   **数据一致性**：确保复杂的多表操作在成功完成所有步骤前不会改变数据库状态。
+
+## **在R中实现事务处理**
+
+通过`DBI`和`RSQLite`包可以在R中管理SQLite的事务：
+
+### 示例代码：
+
+``` r
+library(DBI)
+library(RSQLite)
+
+# 连接到数据库
+conn <- dbConnect(RSQLite::SQLite(), "data/TYSQL_copy.sqlite")
+
+# 开始事务
+dbBegin(conn)
+
+tryCatch({
+  # 插入数据
+  dbExecute(conn, "INSERT INTO Customers (cust_id, cust_name) VALUES (1001, 'John Doe')")
+  dbExecute(conn, "INSERT INTO Customers (cust_id, cust_name) VALUES (1002, 'Jane Smith')")
+  
+  # 提交事务
+  dbCommit(conn)
+}, error = function(e) {
+  # 如果出错，回滚事务
+  dbRollback(conn)
+  print("Transaction rolled back due to error")
+})
+
+# 关闭连接
+dbDisconnect(conn)
+```
+
+## 总结
+
+SQLite提供了强大的事务处理功能，包括基本的事务操作和高级的保留点机制。事务处理在保证数据一致性、恢复错误和批量操作中起到关键作用。通过合理使用事务，可以提高数据库的可靠性和操作效率。

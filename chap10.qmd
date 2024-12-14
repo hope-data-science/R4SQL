@@ -1,0 +1,139 @@
+---
+title: "必知必会第10课：分组数据"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 10.1
+dbGetQuery(mydb,"SELECT COUNT(*) AS num_prods
+FROM Products
+WHERE vend_id = 'DLL01';") 
+
+# 10.2 
+dbGetQuery(mydb,"SELECT vend_id, COUNT(*) AS num_prods
+FROM Products
+GROUP BY vend_id;")
+
+# 10.3
+dbGetQuery(mydb,"SELECT cust_id, COUNT(*) AS orders
+FROM Orders
+GROUP BY cust_id
+HAVING COUNT(*) >= 2;")
+dbGetQuery(mydb,"SELECT vend_id, COUNT(*) AS num_prods
+FROM Products
+WHERE prod_price >= 4
+GROUP BY vend_id
+HAVING COUNT(*) >= 2;")
+dbGetQuery(mydb,"SELECT vend_id, COUNT(*) AS num_prods
+FROM Products
+GROUP BY vend_id
+HAVING COUNT(*) >= 2;")
+
+# 10.4
+dbGetQuery(mydb,"SELECT order_num, COUNT(*) AS items
+FROM OrderItems
+GROUP BY order_num
+HAVING COUNT(*) >= 3;")
+dbGetQuery(mydb,"SELECT order_num, COUNT(*) AS items
+FROM OrderItems
+GROUP BY order_num
+HAVING COUNT(*) >= 3
+ORDER BY items, order_num;")
+```
+
+## 基于tidyverse的数据操作
+
+```{r}
+# 10.1 
+tbl(mydb,"Products") %>% 
+  filter(vend_id == 'DLL01') %>% 
+  tally(name = "num_prods")
+
+# 10.2
+tbl(mydb,"Products") %>% 
+  group_by(vend_id) %>% 
+  tally(name = "num_prods")
+
+# 10.3
+tbl(mydb,"Orders") %>% 
+  summarise(orders = n(),.by = cust_id) %>% 
+  filter(orders >= 2)
+tbl(mydb,"Products") %>% 
+  filter(prod_price >= 4) %>%  # WHERE
+  group_by(vend_id) %>% 
+  summarise(num_prods = n()) %>% 
+  filter(num_prods >= 2)  # HAVING
+tbl(mydb,"Products") %>% 
+  group_by(vend_id) %>% 
+  summarise(num_prods = n()) %>% 
+  filter(num_prods >= 2)  
+
+# 10.4
+tbl(mydb,"OrderItems") %>% 
+  group_by(order_num) %>% 
+  tally(name = "items") %>% 
+  filter(items >=3)
+tbl(mydb,"OrderItems") %>% 
+  group_by(order_num) %>% 
+  tally(name = "items") %>% 
+  filter(items >=3) %>% 
+  arrange(items,order_num)
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"OrderItems") %>% 
+  group_by(order_num) %>% 
+  tally(name = "order_lines") %>% 
+  arrange(order_lines)
+
+# 2
+tbl(mydb,"Products") %>% 
+  group_by(vend_id) %>% 
+  summarise(cheapest_item = min(prod_price,na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  arrange(cheapest_item)
+
+# 3
+tbl(mydb,"OrderItems") %>% 
+  filter(sum(quantity) >= 100,.by = order_num) %>% 
+  distinct(order_num) %>% 
+  arrange(order_num)
+
+# 4
+tbl(mydb,"OrderItems") %>% 
+  group_by(order_num) %>% 
+  summarise(total_price = sum(item_price * quantity)) %>% 
+  filter(total_price >= 1000) %>% 
+  arrange(order_num)
+
+# 5
+# GROUP BY 项是错误的。 GROUP BY 必须是实际列，而不是用于执行汇总计算的列。允许使用 GROUP BY order_num。
+
+```

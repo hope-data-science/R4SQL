@@ -1,0 +1,85 @@
+---
+title: "必知必会第7课：创建计算字段"
+author: "黄天元"
+format: html
+editor: visual
+---
+
+## 数据库的连接
+
+```{r}
+library(pacman)
+p_load(tidyverse,DBI,RSQLite)
+
+mydb = dbConnect(RSQLite::SQLite(), "data/TYSQL.sqlite")
+```
+
+## 基于SQL的数据操作
+
+```{r}
+# 7.2
+dbGetQuery(mydb,"SELECT vend_name || '(' || vend_country || ')'
+FROM Vendors
+ORDER BY vend_name;") 
+dbGetQuery(mydb,"SELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'
+FROM Vendors
+ORDER BY vend_name;")
+dbGetQuery(mydb,"SELECT RTRIM(vend_name) || ' (' || RTRIM(vend_country) || ')'
+AS vend_title
+FROM Vendors
+ORDER BY vend_name;")
+
+# 7.3
+dbGetQuery(mydb,"SELECT prod_id, quantity, item_price
+FROM OrderItems
+WHERE order_num = 20008;")
+dbGetQuery(mydb,"SELECT prod_id,
+quantity,
+item_price,
+quantity*item_price AS expanded_price
+FROM OrderItems
+WHERE order_num = 20008;")
+```
+
+## 基于tidyverse的数据操作
+
+```{r}
+# 7.2
+tbl(mydb,"Vendors") %>% 
+  arrange(vend_name) %>% 
+  transmute(vend_title = str_c(str_trim(vend_name,"right")," (",
+                            str_trim(vend_country,"right"),")"))
+
+# 7.3
+tbl(mydb,"OrderItems") %>% 
+  filter(order_num == 20008) %>% 
+  transmute(prod_id,quantity,item_price,
+            expanded_price = quantity * item_price)
+```
+
+## 练习
+
+-   请使用SQL和R两种方式，解决课后的挑战题。
+
+```{r}
+#| echo: false
+#| eval: false 
+
+## SQL
+
+# 参考：https://forta.com/books/0135182794/challenges/
+
+## R
+
+# 1
+tbl(mydb,"Vendors") %>% 
+  transmute(vname = vend_name,vaddress = vend_address,
+            vcity = vend_city) %>% 
+  arrange(vname)
+
+# 2
+tbl(mydb,"Products") %>% 
+  transmute(prod_id,prod_price,
+            sale_price = prod_price * 0.9)
+
+```
