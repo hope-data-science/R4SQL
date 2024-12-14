@@ -12,6 +12,7 @@ SQLite的集成开发环境为[DB Browser for SQLite](https://sqlitebrowser.org/
 相关参考资料：
 
 -   [在R中使用SQLite](https://cran.r-project.org/web/packages/RSQLite/vignettes/RSQLite.html)
--   [R数据科学数据库相关章节](https://r4ds.hadley.nz/databases)
--   [CRAN Task View: Databases with R](https://cran.r-project.org/web/views/Databases.html)
+-   [R for Data Science数据库相关章节](https://r4ds.hadley.nz/databases)
 -   [SQL必知必会（第五版）官方资料](https://forta.com/books/0135182794/)
+-   [CRAN Task View: Databases with R](https://cran.r-project.org/web/views/Databases.html)
+-   [R, Databases & SQL](https://rdbsql.rsquaredacademy.com/)

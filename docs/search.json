@@ -4,7 +4,7 @@
     "href": "index.html",
     "title": "基于R的SQL实验讲义",
     "section": "",
-    "text": "前言\n本书是浙江财经大学数据科学学院数据科学与大数据技术系黄天元讲师为《数据库技术及应用》课程筹备的课程讲义，旨在综合使用R、SQLite等工具，结合《SQL必知必会》等经典教程，引导学生了解数据库技术的方方面面，并进行实践操作。R语言环境配置如下：\n\nif (!require(\"pacman\")) install.packages(\"pacman\")\npacman::p_load(tidyverse,DBI,RSQLite,fs,dbplyr)\n\nSQLite的集成开发环境为DB Browser for SQLite。\n相关参考资料：\n\n在R中使用SQLite\nR数据科学数据库相关章节\nCRAN Task View: Databases with R\nSQL必知必会（第五版）官方资料",
+    "text": "前言\n本书是浙江财经大学数据科学学院数据科学与大数据技术系黄天元讲师为《数据库技术及应用》课程筹备的课程讲义，旨在综合使用R、SQLite等工具，结合《SQL必知必会》等经典教程，引导学生了解数据库技术的方方面面，并进行实践操作。R语言环境配置如下：\n\nif (!require(\"pacman\")) install.packages(\"pacman\")\npacman::p_load(tidyverse,DBI,RSQLite,fs,dbplyr)\n\nSQLite的集成开发环境为DB Browser for SQLite。\n相关参考资料：\n\n在R中使用SQLite\nR for Data Science数据库相关章节\nSQL必知必会（第五版）官方资料\nCRAN Task View: Databases with R\nR, Databases & SQL",
     "crumbs": [
       "前言"
     ]
