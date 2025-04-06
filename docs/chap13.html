@@ -380,8 +380,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">str_trim</span>(vend_country),<span class="st">")"</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  )) </span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [6 x 1]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 1]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   vend_title             
   &lt;chr&gt;                  
 1 Bear Emporium (USA)    
@@ -409,8 +409,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(prod_id <span class="sc">==</span> <span class="st">'RGAN01'</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cust_name,cust_contact)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [2 x 2]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 2]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_name     cust_contact      
   &lt;chr&gt;         &lt;chr&gt;             
 1 Fun4All       Denise L. Stephens
@@ -434,8 +434,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cust_id, cust_name, cust_contact) <span class="sc">%&gt;%</span> </span>
 <span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(cust_name <span class="sc">==</span> query1)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [2 x 3]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 3]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    cust_name cust_contact      
   &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;             
 1 1000000003 Fun4All   Jim Jones         
@@ -460,8 +460,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <pre><code>Joining with `by = join_by(cust_name)`</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [2 x 3]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 3]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    cust_name cust_contact      
   &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;             
 1 1000000003 Fun4All   Jim Jones         
@@ -481,7 +481,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 2 1000000005 The Toy Store    4545 53rd Street   Chicago         IL    54545
   cust_country       cust_contact            cust_email order_num order_date
 1          USA Denise L. Stephens dstephens@fun4all.com     20007 2020-01-30
-2          USA         Kim Howard   kim@thetoystore.com     20008 2020-02-03
+2          USA         Kim Howard                  &lt;NA&gt;     20008 2020-02-03
   prod_id quantity item_price
 1  RGAN01       50       4.49
 2  RGAN01        5       4.99</code></pre>
@@ -509,7 +509,7 @@ Joining with `by = join_by(order_num)`</code></pre>
   cust_country cust_contact       cust_email            order_num order_date
   &lt;chr&gt;        &lt;chr&gt;              &lt;chr&gt;                     &lt;int&gt; &lt;chr&gt;     
 1 USA          Denise L. Stephens dstephens@fun4all.com     20007 2020-01-30
-2 USA          Kim Howard         kim@thetoystore.com       20008 2020-02-03
+2 USA          Kim Howard         &lt;NA&gt;                      20008 2020-02-03
   prod_id quantity item_price
   &lt;chr&gt;      &lt;int&gt;      &lt;dbl&gt;
 1 RGAN01        50       4.49
@@ -533,8 +533,8 @@ Joining with `by = join_by(order_num)`</code></pre>
 <span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
 <span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cust_id,order_num) </span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [5 x 2]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 2]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    order_num
   &lt;chr&gt;          &lt;int&gt;
 1 1000000001     20005
@@ -553,8 +553,7 @@ Joining with `by = join_by(order_num)`</code></pre>
 3 1000000002        NA
 4 1000000003     20006
 5 1000000004     20007
-6 1000000005     20008
-7 1000000006        NA</code></pre>
+6 1000000005     20008</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl</span>(mydb,<span class="st">"Customers"</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
@@ -562,8 +561,8 @@ Joining with `by = join_by(order_num)`</code></pre>
 <span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
 <span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cust_id,order_num)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [7 x 2]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 2]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    order_num
   &lt;chr&gt;          &lt;int&gt;
 1 1000000001     20005
@@ -571,8 +570,7 @@ Joining with `by = join_by(order_num)`</code></pre>
 3 1000000002        NA
 4 1000000003     20006
 5 1000000004     20007
-6 1000000005     20008
-7 1000000006        NA</code></pre>
+6 1000000005     20008</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(mydb,<span class="st">"SELECT Customers.cust_id, Orders.order_num</span></span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="st">FROM Customers</span></span>
@@ -591,8 +589,8 @@ Joining with `by = join_by(order_num)`</code></pre>
 <span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
 <span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cust_id,order_num)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [5 x 2]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 2]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    order_num
   &lt;chr&gt;          &lt;int&gt;
 1 1000000001     20005
@@ -611,8 +609,7 @@ Joining with `by = join_by(order_num)`</code></pre>
 3 1000000002        NA
 4 1000000003     20006
 5 1000000004     20007
-6 1000000005     20008
-7 1000000006        NA</code></pre>
+6 1000000005     20008</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl</span>(mydb,<span class="st">"Customers"</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">full_join</span>(</span>
@@ -620,8 +617,8 @@ Joining with `by = join_by(order_num)`</code></pre>
 <span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
 <span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cust_id,order_num)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [7 x 2]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 2]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    order_num
   &lt;chr&gt;          &lt;int&gt;
 1 1000000001     20005
@@ -629,8 +626,7 @@ Joining with `by = join_by(order_num)`</code></pre>
 3 1000000002        NA
 4 1000000003     20006
 5 1000000004     20007
-6 1000000005     20008
-7 1000000006        NA</code></pre>
+6 1000000005     20008</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 13.3</span></span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="fu">dbGetQuery</span>(mydb,<span class="st">"SELECT Customers.cust_id,</span></span>
@@ -650,8 +646,8 @@ Joining with `by = join_by(order_num)`</code></pre>
 <span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(<span class="fu">tbl</span>(mydb,<span class="st">"Orders"</span>),<span class="at">by =</span> <span class="st">"cust_id"</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(cust_id,<span class="at">name =</span> <span class="st">"num_ord"</span>)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [4 x 2]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 2]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    num_ord
   &lt;chr&gt;        &lt;int&gt;
 1 1000000001       2
@@ -670,8 +666,7 @@ Joining with `by = join_by(order_num)`</code></pre>
 2 1000000002       0
 3 1000000003       1
 4 1000000004       1
-5 1000000005       1
-6 1000000006       0</code></pre>
+5 1000000005       1</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl</span>(mydb,<span class="st">"Customers"</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(cust_id) <span class="sc">%&gt;%</span> </span>
@@ -683,22 +678,21 @@ Use `na.rm = TRUE` to silence this warning
 This warning is displayed once every 8 hours.</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code># Source:   SQL [6 x 2]
-# Database: sqlite 3.46.0 [F:\Data\R4SQL\data\TYSQL.sqlite]
+<pre><code># Source:   SQL [?? x 2]
+# Database: sqlite 3.47.1 [D:\C数据库技术及应用\R4SQL\data\TYSQL.sqlite]
   cust_id    num_ord
   &lt;chr&gt;        &lt;int&gt;
 1 1000000001       2
 2 1000000002       0
 3 1000000003       1
 4 1000000004       1
-5 1000000005       1
-6 1000000006       0</code></pre>
+5 1000000005       1</code></pre>
 </div>
 </div>
 </section>
 <section id="注意" class="level2" data-number="13.3">
 <h2 data-number="13.3" class="anchored" data-anchor-id="注意"><span class="header-section-number">13.3</span> 注意</h2>
-<p>SQLite在3.39.0版本之前不支持右连接（RIGHT JOIN）和全外连接（FULL OUTER JOIN），但从3.39.0版本开始支持这两种连接类型。</p>
+<p>SQLite在3.39.0版本之前不支持右连接（RIGHT OUTER JOIN）和全外连接（FULL OUTER JOIN），但从3.39.0版本开始支持这两种连接类型。</p>
 </section>
 <section id="练习" class="level2" data-number="13.4">
 <h2 data-number="13.4" class="anchored" data-anchor-id="练习"><span class="header-section-number">13.4</span> 练习</h2>
