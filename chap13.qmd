@@ -146,7 +146,7 @@ tbl(mydb,"Customers") %>%
 
 ## 注意
 
-SQLite在3.39.0版本之前不支持右连接（RIGHT JOIN）和全外连接（FULL OUTER JOIN），但从3.39.0版本开始支持这两种连接类型。
+SQLite在3.39.0版本之前不支持右连接（RIGHT OUTER JOIN）和全外连接（FULL OUTER JOIN），但从3.39.0版本开始支持这两种连接类型。
 
 ## 练习
 
